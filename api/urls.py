@@ -1,8 +1,5 @@
-from django.urls import path
-from .views import MyTokenObtainPairView
-from rest_framework_simplejwt.views import TokenRefreshView
+from django.urls import path, include
 
-urlpatterns = [
-    path('login/', MyTokenObtainPairView.as_view(), name='api-login'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-]
+  urlpatterns = [
+    path('accounts/', include('api.accounts.urls')),
+  ]
