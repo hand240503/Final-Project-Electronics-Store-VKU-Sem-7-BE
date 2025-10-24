@@ -1,8 +1,8 @@
-# api/products/management/commands/fake_products_real.py
 import random
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.db import connection
+from django.utils.text import slugify
 from api.products.models import (
     Brand, Category, Product, ProductVariant, Document, ProductDocument,
     Review, ShippingInfo, ReturnPolicy, Notification
@@ -60,7 +60,14 @@ class Command(BaseCommand):
         # --- Categories ---
         categories = []
         for name in CATEGORIES:
-            category = Category.objects.create(name=name)
+            # tạo slug duy nhất
+            base_slug = slugify(name)
+            slug = base_slug
+            counter = 1
+            while Category.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            category = Category.objects.create(name=name, slug=slug)
             categories.append(category)
 
         # --- Users for reviews ---
@@ -74,30 +81,37 @@ class Command(BaseCommand):
 
         # --- Products ---
         for i, product_name in enumerate(PRODUCTS[:30]):
+            price = round(random.uniform(100, 2000), 2)
+            discount_price = random.choice([None, round(random.uniform(50, price-1), 2)])
             product = Product.objects.create(
                 name=product_name,
                 description=f"Description for {product_name}",
-                price=random.uniform(100, 2000),
-                discount_price=random.choice([None, random.uniform(50, 1500)]),
+                price=price,
+                discount_price=discount_price,
                 brand=random.choice(brands),
                 category=random.choice(categories),
-                rating=random.uniform(1, 5),
+                rating=round(random.uniform(1, 5), 2),
                 num_reviews=random.randint(0, 50),
-                is_available=random.choice([True, True, False])
+                is_available=random.choice([True, True, False]),
+                is_popular=random.choice([True, False]),
+                is_sale=discount_price is not None,
+                is_best_sale=random.choice([True, False])
             )
 
             # --- Product Variants ---
             colors = ["Red", "Blue", "Black", "White", "Silver"]
             sizes = ["S", "M", "L", "XL"]
             for _ in range(random.randint(1, 3)):
+                color = random.choice(colors)
+                size = random.choice(sizes)
                 ProductVariant.objects.create(
                     product=product,
-                    name=f"{random.choice(colors)} - {random.choice(sizes)}",
-                    color=random.choice(colors),
-                    size=random.choice(sizes),
+                    name=f"{color} - {size}",
+                    color=color,
+                    size=size,
                     stock=random.randint(0, 100),
-                    price=product.price,
-                    discount_price=product.discount_price
+                    price=price,
+                    discount_price=discount_price
                 )
 
             # --- Documents ---
@@ -105,12 +119,12 @@ class Command(BaseCommand):
                 doc = Document.objects.create(
                     title=f"{product_name} Image {j+1}",
                     type=Document.IMAGE,
-                    file=f"documents/{product_name.replace(' ', '_').lower()}_{j+1}.jpg"
+                    file=f"https://imgur.com/5M89G2P"
                 )
                 ProductDocument.objects.create(
                     product=product,
                     document=doc,
-                    is_main=(j==0)
+                    is_main=(j == 0)
                 )
 
             # --- Reviews ---

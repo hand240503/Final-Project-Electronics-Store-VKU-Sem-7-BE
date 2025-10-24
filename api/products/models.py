@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils.text import slugify
 
 # ==========================
 # BRANDS
@@ -21,7 +22,15 @@ class Brand(models.Model):
 # ==========================
 class Category(models.Model):
     name = models.CharField(max_length=255)
-    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='children'
+    )
+    image = models.URLField(null=True, blank=True)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
 
     class Meta:
         db_table = 'categories'
@@ -29,7 +38,18 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
-
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            # tạo slug từ name
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+            # kiểm tra duplicate trong database
+            while Category.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 # ==========================
 # PRODUCTS
 # ==========================
@@ -43,6 +63,15 @@ class Product(models.Model):
     rating = models.FloatField(default=0)
     num_reviews = models.IntegerField(default=0)
     is_available = models.BooleanField(default=True)
+
+    # Thuộc tính trạng thái
+    is_popular = models.BooleanField(default=False)
+    is_sale = models.BooleanField(default=False)
+    is_best_sale = models.BooleanField(default=False)
+
+    # Tùy chọn nâng cao
+    sold = models.PositiveIntegerField(default=0)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -52,18 +81,52 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+    # ==========================
+    # CÁC HÀM LẤY DỮ LIỆU
+    # ==========================
+
+    # Lấy theo thuộc tính
+    @classmethod
+    def get_popular_attr(cls, limit=10):
+        return cls.objects.filter(is_available=True, is_popular=True)[:limit]
+
+    @classmethod
+    def get_sale_attr(cls, limit=10):
+        return cls.objects.filter(is_available=True, is_sale=True)[:limit]
+
+    @classmethod
+    def get_best_sale_attr(cls, limit=10):
+        return cls.objects.filter(is_available=True, is_best_sale=True)[:limit]
+
+    # Lấy theo tính toán
+    @classmethod
+    def get_popular(cls, limit=10):
+        return cls.objects.filter(is_available=True).order_by('-rating', '-num_reviews')[:limit]
+
+    @classmethod
+    def get_sale(cls, limit=10):
+        return cls.objects.filter(
+            discount_price__isnull=False,
+            discount_price__lt=models.F('price'),
+            is_available=True
+        ).order_by('-updated_at')[:limit]
+
+    @classmethod
+    def get_best_sale(cls, limit=10):
+        return cls.objects.filter(is_available=True).order_by('-sold', '-rating')[:limit]
+
 
 # ==========================
-# PRODUCT VARIANTS (SIZE, COLOR, STOCK)
+# PRODUCT VARIANTS
 # ==========================
 class ProductVariant(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants')
     name = models.CharField(max_length=255, blank=True, null=True)  # ví dụ: "Red - L"
-    sku = models.CharField(max_length=50, blank=True, null=True)  # mã SKU riêng
+    sku = models.CharField(max_length=50, blank=True, null=True)
     color = models.CharField(max_length=50, blank=True, null=True)
     size = models.CharField(max_length=20, blank=True, null=True)
     stock = models.PositiveIntegerField(default=0)
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # tùy variant có giá riêng
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
@@ -141,6 +204,7 @@ class Document(models.Model):
     FILE = 'file'
     IMAGE = 'image'
     VIDEO = 'video'
+
     TYPE_CHOICES = [
         (FILE, 'File'),
         (IMAGE, 'Image'),
