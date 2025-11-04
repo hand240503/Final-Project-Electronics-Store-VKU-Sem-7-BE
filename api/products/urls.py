@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     CategoryParentsAPIView,
     CategoryProductsAPIView,
-    ParentCategoryProductsAPIView
+    ParentCategoryProductsAPIView,
+    ProductDetailAPIView,
 )
 
 urlpatterns = [
@@ -16,4 +17,5 @@ urlpatterns = [
     # Lấy sản phẩm tất cả category con của parent
     # Nếu parent_id = 0, có thể truyền ?type=popular/sale/best_seller
     path('parent-categories/<int:parent_id>/', ParentCategoryProductsAPIView.as_view(), name='parent-category-products'),
+    path('<int:product_id>/', ProductDetailAPIView.as_view(), name='product-detail'),
 ]

@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Category
-from .serializers import CategoryParentFESerializer, ProductsByCategoryFESerializer
+from .models import Category, Product
+from .serializers import CategoryParentFESerializer, ProductsByCategoryFESerializer,ProductDetailSerializer
 
 # ==========================
 # Lấy danh sách category cha + subcategories
@@ -46,4 +46,23 @@ class ParentCategoryProductsAPIView(APIView):
             if not parent:
                 return Response({'detail': 'Parent category not found'}, status=status.HTTP_404_NOT_FOUND)
             serializer = ProductsByCategoryFESerializer(parent, context={'mode': 'parent'})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+# ======================================================
+#   Lấy chi tiết sản phẩm theo ID
+# ======================================================
+class ProductDetailAPIView(APIView):
+    """
+    GET /api/products/<int:product_id>/
+    Trả về chi tiết sản phẩm (brand, variants, reviews, images,...)
+    """
+    def get(self, request, product_id):
+        product = Product.objects.filter(id=product_id, is_available=True).first()
+        if not product:
+            return Response(
+                {"detail": "Product not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ProductDetailSerializer(product, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
