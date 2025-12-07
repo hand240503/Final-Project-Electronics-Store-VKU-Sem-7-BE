@@ -212,7 +212,7 @@ class Document(models.Model):
     ]
 
     title = models.CharField(max_length=255, blank=True, null=True)
-    file = models.FileField(upload_to='documents/')
+    file = models.FileField(upload_to='file/')
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default=FILE)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 

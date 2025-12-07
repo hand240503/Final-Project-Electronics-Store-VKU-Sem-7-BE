@@ -1,0 +1,421 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chi tiết sản phẩm - Admin</title>
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/admin_product.css' %}" rel="stylesheet" />
+    <style>
+      .detail-value {
+        color: #444;
+        font-size: 15px;
+        font-weight: 500;
+        margin: 0;
+      }
+
+      .detail-label {
+        font-weight: 700;
+        color: #222;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .detail-label i {
+        color: #6a5af9;
+        font-size: 14px;
+      }
+
+      .preview-image {
+        max-width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: block;
+        margin: 0 auto;
+      }
+
+      .no-image-box {
+        padding: 60px 40px;
+        text-align: center;
+        background: #f8f9fa;
+        border-radius: 8px;
+        color: #999;
+      }
+
+      .no-image-box i {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+      }
+
+      .no-image-box p {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .info-section {
+        background: #f7f9fc;
+        padding: 18px;
+        border-radius: 8px;
+        border-left: 4px solid #6a5af9;
+        margin-bottom: 16px;
+      }
+
+      .info-section .detail-label {
+        margin-bottom: 12px;
+      }
+
+      .status-badges {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+
+      .status-badges .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 6px;
+      }
+
+      .pricing-box {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+        padding: 18px;
+        border-radius: 8px;
+        border-left: 4px solid #6a5af9;
+        margin-bottom: 16px;
+      }
+
+      .price-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      .price-row:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+      }
+
+      .price-label {
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .price-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #2c3e50;
+      }
+
+      .discount-price {
+        color: #e74c3c !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <!-- SIDEBAR -->
+        <div class="col-md-2 sidebar">
+          <div class="text-white ps-3 mb-4"
+               style="border-bottom:1px solid rgba(255,255,255,0.2);
+                      padding:20px 0;
+                      text-align:center">
+            <h4 class="m-0">
+              <i class="fas fa-cog"></i> ADMIN
+            </h4>
+          </div>
+          <a href="{% url 'product_list' %}">
+            <i class="fas fa-box"></i> Danh sách sản phẩm
+          </a>
+          <a href="{% url 'product_create' %}">
+            <i class="fas fa-plus"></i> Thêm sản phẩm
+          </a>
+          <a href="#"><i class="fas fa-tags"></i> Danh mục</a>
+          <a href="#"><i class="fas fa-user"></i> Khách hàng</a>
+          <a href="#"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
+        </div>
+        <!-- MAIN CONTENT -->
+        <div class="col-md-10 main-content">
+          <div class="row">
+            <!-- LEFT: DETAIL CARD -->
+            <div class="col-lg-8">
+              <div class="card shadow-sm form-card">
+                <!-- Header -->
+                <div class="card-header form-card-header">
+                  <h5 class="mb-0">
+                    <i class="fas fa-cube"></i> {{ product.name }}
+                  </h5>
+                </div>
+                <!-- Body -->
+                <div class="card-body form-card-body">
+                  <!-- IMAGE SECTION -->
+                  <div class="mb-4">
+                    <div class="detail-label">
+                      <i class="fas fa-image"></i> Hình ảnh sản phẩm
+                    </div>
+                    {% if image %}
+                      <div style="text-align: center;">
+                        <img src="{{ image.document.file }}"
+                             alt="{{ product.name }}"
+                             class="preview-image">
+                      </div>
+                    {% else %}
+                      <div class="no-image-box">
+                        <i class="fas fa-image"></i>
+                        <p>Không có hình ảnh</p>
+                      </div>
+                    {% endif %}
+                  </div>
+                  <!-- PRICING SECTION -->
+                  <div class="pricing-box">
+                    <div class="detail-label mb-3">
+                      <i class="fas fa-tag"></i> Giá tiền
+                    </div>
+                    <div class="price-row">
+                      <span class="price-label">Giá gốc:</span>
+                      <span class="price-value">{{ product.price }}₫</span>
+                    </div>
+                    {% if product.discount_price %}
+                      <div class="price-row">
+                        <span class="price-label">Giá khuyến mại:</span>
+                        <span class="price-value discount-price">{{ product.discount_price }}₫</span>
+                      </div>
+                    {% endif %}
+                  </div>
+                  <!-- DESCRIPTION SECTION -->
+                  {% if product.description %}
+                    <div class="mb-4">
+                      <div class="detail-label">
+                        <i class="fas fa-align-left"></i> Mô tả
+                      </div>
+                      <div class="info-section"
+                           style="margin-bottom: 0;
+                                  border-left: 4px solid #6a5af9">
+                        <p class="detail-value">{{ product.description }}</p>
+                      </div>
+                    </div>
+                  {% endif %}
+                  <!-- STATUS SECTION -->
+                  <div class="mb-4">
+                    <div class="detail-label">
+                      <i class="fas fa-check-circle"></i> Trạng thái
+                    </div>
+                    <div class="status-badges">
+                      {% if product.is_available %}
+                        <span class="badge bg-success">
+                          <i class="fas fa-check-circle"></i> Còn hàng
+                        </span>
+                      {% else %}
+                        <span class="badge bg-danger">
+                          <i class="fas fa-times-circle"></i> Hết hàng
+                        </span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <!-- FEATURES SECTION -->
+                  <div class="mb-4">
+                    <div class="detail-label">
+                      <i class="fas fa-star"></i> Nhãn đặc biệt
+                    </div>
+                    <div class="status-badges">
+                      {% if product.is_popular %}
+                        <span class="badge bg-warning">
+                          <i class="fas fa-fire"></i> Phổ biến
+                        </span>
+                      {% endif %}
+                      {% if product.is_sale %}
+                        <span class="badge bg-danger">
+                          <i class="fas fa-bolt"></i> Flash sale
+                        </span>
+                      {% endif %}
+                      {% if product.is_best_sale %}
+                        <span class="badge bg-info">
+                          <i class="fas fa-crown"></i> Bán chạy
+                        </span>
+                      {% endif %}
+                      {% if not product.is_popular and not product.is_sale and not product.is_best_sale %}
+                        <span class="text-muted small">Không có nhãn đặc biệt</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <!-- INFO GRID -->
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <div class="info-section">
+                        <div class="detail-label">
+                          <i class="fas fa-hashtag"></i> ID
+                        </div>
+                        <p class="detail-value">#{{ product.id }}</p>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="info-section">
+                        <div class="detail-label">
+                          <i class="fas fa-list"></i> Danh mục
+                        </div>
+                        <p class="detail-value">{{ product.category|default:"Chưa phân loại" }}</p>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="info-section">
+                        <div class="detail-label">
+                          <i class="fas fa-star"></i> Đánh giá
+                        </div>
+                        <p class="detail-value">
+                          <span style="background: #fff3cd;
+                                       color: #856404;
+                                       padding: 4px 8px;
+                                       border-radius: 4px;
+                                       font-weight: 600">
+                            {{ product.rating|default:"0" }} <i class="fas fa-star" style="color: #ffc107;"></i>
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="info-section">
+                        <div class="detail-label">
+                          <i class="fas fa-comment-dots"></i> Số đánh giá
+                        </div>
+                        <p class="detail-value">{{ product.num_reviews|default:"0" }} người</p>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="info-section">
+                        <div class="detail-label">
+                          <i class="fas fa-fire"></i> Đã bán
+                        </div>
+                        <p class="detail-value">{{ product.sold|default:"0" }} sản phẩm</p>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="info-section">
+                        <div class="detail-label">
+                          <i class="fas fa-cube"></i> Tên sản phẩm
+                        </div>
+                        <p class="detail-value">{{ product.name }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- RIGHT: ACTION CARD -->
+            <div class="col-lg-4">
+              <!-- Action Card -->
+              <div class="card shadow-sm info-card">
+                <div class="card-header info-card-header">
+                  <h6 class="mb-0">
+                    <i class="fas fa-cog"></i> Hành động
+                  </h6>
+                </div>
+                <div class="card-body info-card-body">
+                  <a href="{% url 'product_update' product.id %}"
+                     class="btn-submit w-100 mb-3"
+                     style="display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 8px;
+                            text-decoration: none">
+                    <i class="fas fa-edit"></i> Sửa sản phẩm
+                  </a>
+                  <a href="{% url 'product_list' %}"
+                     class="btn-cancel w-100"
+                     style="text-decoration: none">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                  </a>
+                </div>
+              </div>
+              <!-- Info Card -->
+              <div class="card shadow-sm info-card mt-4">
+                <div class="card-header info-card-header">
+                  <h6 class="mb-0">
+                    <i class="fas fa-info-circle"></i> Thông tin
+                  </h6>
+                </div>
+                <div class="card-body info-card-body">
+                  <div class="mb-3">
+                    <h6 class="small fw-bold">Chi tiết sản phẩm:</h6>
+                    <ul class="small mb-0">
+                      <li>
+                        <strong>ID:</strong> #{{ product.id }}
+                      </li>
+                      <li>
+                        <strong>Danh mục:</strong> {{ product.category|default:"Chưa phân loại" }}
+                      </li>
+                      <li>
+                        <strong>Trạng thái:</strong>
+                        {% if product.is_available %}
+                          <span class="badge bg-success bg-sm">Hoạt động</span>
+                        {% else %}
+                          <span class="badge bg-danger bg-sm">Không hoạt động</span>
+                        {% endif %}
+                      </li>
+                    </ul>
+                  </div>
+                  <hr class="my-3">
+                  <div class="mb-3">
+                    <h6 class="small fw-bold">Thống kê:</h6>
+                    <ul class="small mb-0">
+                      <li>
+                        <strong>Đánh giá:</strong> {{ product.rating|default:"0" }} <i class="fas fa-star" style="color: #ffc107;"></i>
+                      </li>
+                      <li>
+                        <strong>Số lượt đánh giá:</strong> {{ product.num_reviews|default:"0" }}
+                      </li>
+                      <li>
+                        <strong>Đã bán:</strong> {{ product.sold|default:"0" }} sản phẩm
+                      </li>
+                    </ul>
+                  </div>
+                  <hr class="my-3">
+                  <div>
+                    <h6 class="small fw-bold">Nhãn:</h6>
+                    <div class="status-badges">
+                      {% if product.is_popular %}
+                        <span class="badge bg-warning">
+                          <i class="fas fa-fire"></i> Phổ biến
+                        </span>
+                      {% endif %}
+                      {% if product.is_sale %}
+                        <span class="badge bg-danger">
+                          <i class="fas fa-bolt"></i> Flash sale
+                        </span>
+                      {% endif %}
+                      {% if product.is_best_sale %}
+                        <span class="badge bg-info">
+                          <i class="fas fa-crown"></i> Bán chạy
+                        </span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+  </body>
+</html>

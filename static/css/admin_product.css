@@ -1,0 +1,401 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.sidebar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px 0;
+}
+
+.sidebar a {
+    color: white;
+    text-decoration: none;
+    display: block;
+    padding: 12px 20px;
+    transition: 0.3s;
+}
+
+.sidebar a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding-left: 30px;
+}
+
+.main-content {
+    padding: 30px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.btn-add {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 10px 25px;
+    font-weight: 500;
+    color: white;
+}
+
+.btn-add:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+.product-table {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.table tbody tr {
+    border-bottom: 1px solid #dee2e6;
+    transition: 0.3s;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.btn-detail {
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+}
+
+.btn-detail:hover {
+    background-color: #0b5ed7;
+    color: white;
+}
+
+.btn-edit {
+    background-color: #198754;
+    color: white;
+    border: none;
+}
+
+.btn-edit:hover {
+    background-color: #157347;
+    color: white;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+}
+
+.btn-delete:hover {
+    background-color: #c82333;
+    color: white;
+}
+
+.price-badge {
+    background-color: #e7f3ff;
+    color: #0066cc;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.product-name {
+    font-weight: 500;
+    color: #333;
+}
+
+/* Làm container bảng full chiều ngang */
+.product-table {
+    width: 100%;
+}
+
+/* Bảng full width */
+.product-table table {
+    width: 100%;
+    table-layout: fixed;
+    /* Giúp các cột gọn gàng và đều nhau */
+}
+
+/* Căn chỉnh text tránh tràn, hiển thị gọn */
+.product-table table th,
+.product-table table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+/* --- Card chính của form --- */
+
+.form-card {
+    border: none;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.form-card-header {
+    background: linear-gradient(135deg, #6a5af9, #8378ff);
+    padding: 18px 22px;
+    color: white;
+    border-bottom: none;
+}
+
+.form-card-body {
+    padding: 28px;
+}
+
+/* --- Field --- */
+.form-group {
+    margin-bottom: 22px;
+}
+
+/* --- Input Style --- */
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    outline: none;
+    font-size: 15px;
+    background: #fafafa;
+    transition: 0.3s ease;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: #999;
+}
+
+/* Hover + focus */
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    border-color: #6a5af9;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(106, 90, 249, 0.15);
+}
+
+/* Textarea */
+.form-group textarea {
+    resize: vertical;
+    min-height: 110px;
+}
+
+/* Checkbox */
+.form-group input[type="checkbox"] {
+    width: auto;
+    transform: scale(1.2);
+    margin-right: 8px;
+}
+
+.form-group input[type="checkbox"]+label {
+    margin-left: 6px;
+    font-weight: 500;
+    position: static;
+}
+
+/* --- Error messages --- */
+.form-group .errorlist {
+    margin-top: 5px;
+    padding-left: 0;
+}
+
+.form-group .errorlist li {
+    color: #d9534f;
+    font-size: 13px;
+    margin-left: 5px;
+}
+
+/* --- Buttons --- */
+.btn-group-form {
+    margin-top: 25px;
+    display: flex;
+    gap: 12px;
+}
+
+.btn-submit {
+    background: #6a5af9;
+    border: none;
+    padding: 12px 20px;
+    color: white;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    font-weight: 500;
+    width: 100%;
+    transition: 0.3s ease;
+}
+
+.btn-submit:hover {
+    background: #5948f5;
+}
+
+.btn-cancel {
+    background: #e9ecef;
+    border: none;
+    padding: 12px 20px;
+    color: #333;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    transition: 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background: #d7dce1;
+}
+
+/* --- Info Card (bên phải) --- */
+.info-card {
+    border-radius: 14px;
+    border: none;
+}
+
+.info-card-header {
+    background: #f7f7f7;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.info-card-body {
+    padding: 20px;
+}
+
+.info-card-body ul {
+    padding-left: 20px;
+    margin: 0;
+}
+
+.info-card-body li {
+    margin-bottom: 8px;
+    color: #555;
+    font-size: 14px;
+}
+
+/* Header */
+.page-header-modern h1 {
+    font-weight: 700;
+}
+
+.page-header-modern .subtitle {
+    color: #777;
+    font-size: 14px;
+}
+
+/* Card */
+.modern-card {
+    border-radius: 12px;
+}
+
+.modern-card-header {
+    background: linear-gradient(135deg, #6fb1fc 0%, #4364f7 100%);
+    padding: 20px 22px;
+    color: white !important;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.modern-card-header h5 {
+    color: white;
+    font-weight: 700;
+}
+
+.modern-card-header i {
+    color: #ffffff;
+    opacity: 0.9;
+    margin-right: 6px;
+}
+
+
+/* Grid hiển thị thông tin */
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 30px;
+    padding: 5px 0;
+}
+
+/* Tên trường (label) rõ ràng hơn */
+.details-grid label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: 0.2px;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+/* Nội dung */
+.details-grid p,
+.details-grid span {
+    margin: 0;
+    font-size: 15px;
+    color: #444;
+}
+
+/* Mô tả */
+.desc {
+    background: #f2f4f6;
+    padding: 12px 15px;
+    border-radius: 8px;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* Nhãn (badge) */
+.badge {
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+/* Grid full width */
+.grid-full {
+    grid-column: span 2;
+}
+
+/* Action card */
+.action-card {
+    border-radius: 12px;
+}
+
+.action-card .btn {
+    padding: 10px 14px;
+    font-size: 15px;
+    font-weight: 600;
+}
