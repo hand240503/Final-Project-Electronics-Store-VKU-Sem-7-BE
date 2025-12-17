@@ -8,6 +8,7 @@ from .models import Product, Document, ProductDocument, Category
 from .forms import ProductForm
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from .serializers import ProductSearchSerializer
 
 import requests
 
@@ -220,5 +221,30 @@ class ProductDetailAPIView(APIView):
 
         serializer = ProductDetailSerializer(product, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+# ======================================================
+#   Tìm kiếm sản phẩm theo tên
+# ======================================================
+class ProductSearchView(APIView):
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        
+        if not query:
+            return Response(
+                {'error': 'Vui lòng nhập từ khóa tìm kiếm'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        products = Product.search_by_name(query, limit=5)
+        serializer = ProductSearchSerializer(
+            products,
+            many=True,
+            context={'request': request}
+        )
+        
+        return Response({
+            'query': query,
+            'count': products.count(),
+            'results': serializer.data
+        })
     

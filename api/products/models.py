@@ -84,7 +84,6 @@ class Product(models.Model):
     # ==========================
     # CÁC HÀM LẤY DỮ LIỆU
     # ==========================
-
     # Lấy theo thuộc tính
     @classmethod
     def get_popular_attr(cls, limit=10):
@@ -114,7 +113,17 @@ class Product(models.Model):
     @classmethod
     def get_best_sale(cls, limit=10):
         return cls.objects.filter(is_available=True).order_by('-sold', '-rating')[:limit]
-
+    
+    # Tìm kiếm theo tên
+    @classmethod
+    def search_by_name(cls, query, limit=5):
+        if not query or not query.strip():
+            return cls.objects.none()
+        
+        return cls.objects.filter(
+            name__icontains=query,
+            is_available=True
+        ).order_by('-rating', '-num_reviews')[:limit]
 
 # ==========================
 # PRODUCT VARIANTS

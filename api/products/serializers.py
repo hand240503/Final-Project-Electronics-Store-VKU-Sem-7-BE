@@ -197,3 +197,25 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                 url = img.document.file.url
                 urls.append(get_valid_url(request, url))
         return urls
+
+# ==========================
+# Serializer tìm kiếm sản phẩm
+# ==========================
+class ProductSearchSerializer(serializers.ModelSerializer):
+    brand = BrandSerializer(read_only=True)
+    main_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'name', 'price', 'discount_price',
+            'rating', 'num_reviews', 'sold', 'brand', 'main_image'
+        ]
+
+    def get_main_image(self, obj):
+        main_doc = obj.documents.filter(is_main=True).first()
+        if main_doc and main_doc.document and main_doc.document.file:
+            url = main_doc.document.file.url
+            request = self.context.get('request')
+            return get_valid_url(request, url)
+        return None
