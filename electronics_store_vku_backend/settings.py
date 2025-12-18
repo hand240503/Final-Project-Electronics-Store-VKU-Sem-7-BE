@@ -89,12 +89,13 @@ WSGI_APPLICATION = 'electronics_store_vku_backend.wsgi.application'
 #     }
 # }
 
+PASSWORD_DATABASES = os.getenv("PASSWORD_DATABASES")
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'vku_elec_store',        
         'USER': 'root',                 
-        'PASSWORD': '',     
+        'PASSWORD': PASSWORD_DATABASES,
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
