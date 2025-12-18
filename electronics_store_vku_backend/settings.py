@@ -89,12 +89,13 @@ WSGI_APPLICATION = 'electronics_store_vku_backend.wsgi.application'
 #     }
 # }
 
+PASSWORD_DATABASES = os.getenv("PASSWORD_DATABASES")
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'vku_elec_store',        
         'USER': 'root',                 
-        'PASSWORD': '',     
+        'PASSWORD': PASSWORD_DATABASES,     
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
@@ -153,8 +154,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-    ]
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
 }
+
 
 from datetime import timedelta
 
