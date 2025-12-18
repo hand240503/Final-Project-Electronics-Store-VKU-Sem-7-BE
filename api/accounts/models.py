@@ -14,3 +14,26 @@ class RegistrationOTP(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.otp}"
+
+class UserAddress(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='addresses'
+    )
+    full_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20)
+    address_line = models.CharField(max_length=255)
+    ward = models.CharField(max_length=100)
+    district = models.CharField(max_length=100)
+    city = models.CharField(max_length=100)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'user_address'
+        verbose_name = 'User Address'
+        verbose_name_plural = 'User Addresses'
+
+    def __str__(self):
+        return f"{self.full_name} - {self.city}"
