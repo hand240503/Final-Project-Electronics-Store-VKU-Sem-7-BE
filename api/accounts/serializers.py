@@ -16,15 +16,31 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
 
-        # =========================
-        # THÊM USER INFO VÀO RESPONSE
-        # =========================
+        # Lấy tất cả địa chỉ của user
+        addresses = self.user.addresses.all()  # Sử dụng related_name 'addresses'
+
+        # Chuyển thành dict để trả về JSON
+        address_list = []
+        for addr in addresses:
+            address_list.append({
+                "id": addr.id,
+                "full_name": addr.full_name,
+                "phone": addr.phone,
+                "address_line": addr.address_line,
+                "ward": addr.ward,
+                "district": addr.district,
+                "city": addr.city,
+                "is_default": addr.is_default,
+            })
+
+        # Thêm user info và addresses vào response
         data["user"] = {
             "id": self.user.id,
             "username": self.user.username,
             "email": self.user.email,
             "first_name": self.user.first_name,
             "is_active": self.user.is_active,
+            "addresses": address_list
         }
 
         return data
