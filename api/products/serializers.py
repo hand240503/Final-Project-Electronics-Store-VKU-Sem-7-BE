@@ -3,6 +3,7 @@ from .models import (
     Category, Product, Brand,
     ProductVariant, Review, ShippingInfo, ReturnPolicy, ProductDocument
 )
+from api.orders.models import OrderItem, Order
 from urllib.parse import unquote
 
 # ==========================
@@ -219,3 +220,26 @@ class ProductSearchSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             return get_valid_url(request, url)
         return None
+
+class ProductSerializer(serializers.ModelSerializer):
+    brand = BrandSerializer(read_only=True)
+    main_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'brand', 'description', 'price', 'discount_price', 'main_image']
+
+    def get_main_image(self, obj):
+        main_doc = obj.documents.filter(is_main=True).first()
+        if main_doc and main_doc.document and main_doc.document.file:
+            request = self.context.get('request')
+            return get_valid_url(request, main_doc.document.file.url)
+        return None
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+    variant = ProductVariantSerializer(read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ['product', 'variant', 'quantity', 'price']
