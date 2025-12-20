@@ -7,7 +7,7 @@
         <title>Cập nhật sản phẩm - Admin</title>
         <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
         <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
-        <link href="{% static 'css/admin_product.css' %}" rel="stylesheet" />
+        <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
         <style>
         .error-message {
             color: #dc3545;
@@ -45,7 +45,7 @@
                     <a href="{% url 'product_create' %}"><i class="fas fa-plus"></i> Thêm sản phẩm</a>
                     <a href="#"><i class="fas fa-tags"></i> Danh mục</a>
                     <a href="#"><i class="fas fa-user"></i> Khách hàng</a>
-                    <a href="#"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
+                    <a href="{% url 'orders_list' %}"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
                 </div>
                 <!-- MAIN CONTENT -->
                 <div class="col-md-10 main-content">
