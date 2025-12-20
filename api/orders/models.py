@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from api.products.models import Product, ProductVariant
+import uuid  # dùng để tạo order_code tự động
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -14,6 +15,7 @@ class Order(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    order_code = models.CharField(max_length=20, unique=True, editable=False, default='TEMPORDER')
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     has_insurance = models.BooleanField(default=False)
     address_full_name = models.CharField(max_length=255)
@@ -31,8 +33,14 @@ class Order(models.Model):
     class Meta:
         db_table = 'orders'
 
+    def save(self, *args, **kwargs):
+        if not self.order_code:
+            # Tạo mã order_code dạng: ORD + 8 ký tự ngẫu nhiên
+            self.order_code = f"ORD{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Order #{self.id} by {self.user.username}"
+        return f"Order #{self.order_code} by {self.user.username}"
 
 
 class OrderItem(models.Model):

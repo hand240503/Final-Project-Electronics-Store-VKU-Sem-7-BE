@@ -1,13 +1,16 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status as http_status
+from rest_framework.permissions import IsAuthenticated
 from .models import Order, OrderItem
+from api.cart.models import CartItem
 from api.products.models import Product, ProductVariant
 from django.contrib.auth.models import User
 from .serializers import OrderSerializer
-from rest_framework.permissions import IsAuthenticated
 
 class OrderCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         user = request.user
         data = request.data
@@ -15,7 +18,7 @@ class OrderCreateView(APIView):
         # Tạo order
         order = Order.objects.create(
             user=user,
-            total_price = data.get('totalPrice'),
+            total_price=data.get('totalPrice'),
             has_insurance=data.get('hasInsurance', False),
             address_full_name=data['address']['full_name'],
             address_phone=data['address']['phone'],
@@ -23,11 +26,12 @@ class OrderCreateView(APIView):
             ward=data['address'].get('ward'),
             district=data['address'].get('district'),
             city=data['address'].get('city'),
-            note=data.get('note', ''),               # thêm trường note
-            discount_code=data.get('discountCode')   # thêm trường discount_code
+            note=data.get('note', ''),
+            discount_code=data.get('discountCode'),
+            order_code=data.get('orderCode', '')
         )
 
-        # Tạo order items
+        # Tạo order items và xóa khỏi giỏ hàng
         for item in data.get('items', []):
             product = Product.objects.get(id=item['product_id'])
             variant_id = item.get('variant_id')
@@ -41,28 +45,42 @@ class OrderCreateView(APIView):
                 price=item['price']
             )
 
-        return Response({"message": "Order created successfully", "order_id": order.id}, status=status.HTTP_201_CREATED)
+            # Xóa sản phẩm khỏi giỏ hàng của user nếu có
+            CartItem.objects.filter(
+                cart__user=user,
+                product=product,
+                variant_id=variant_id
+            ).delete()
+
+        return Response(
+            {"message": "Order created successfully", "order_id": order.id},
+            status=http_status.HTTP_201_CREATED
+        )
 
 class OrdersByUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "User not found"}, status=http_status.HTTP_404_NOT_FOUND)
 
         orders = Order.objects.filter(user=user).order_by('-created_at')
         serializer = OrderSerializer(orders, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=http_status.HTTP_200_OK)
 
 class OrderDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, order_id):
         try:
-            order = Order.objects.get(id=order_id)
+            order = Order.objects.get(id=order_id, user=request.user)
         except Order.DoesNotExist:
-            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Order not found"}, status=http_status.HTTP_404_NOT_FOUND)
 
         serializer = OrderSerializer(order, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=http_status.HTTP_200_OK)
 
 class CancelOrderAPIView(APIView):
     permission_classes = [IsAuthenticated]
