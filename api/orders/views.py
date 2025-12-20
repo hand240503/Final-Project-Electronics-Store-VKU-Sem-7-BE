@@ -7,6 +7,9 @@ from api.cart.models import CartItem
 from api.products.models import Product, ProductVariant
 from django.contrib.auth.models import User
 from .serializers import OrderSerializer
+from django.views.decorators.http import require_http_methods
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
 
 class OrderCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -98,3 +101,41 @@ class CancelOrderAPIView(APIView):
         order.save()
 
         return Response({"success": True, "message": "Đã hủy đơn hàng"})
+    
+
+@require_http_methods(["GET"])
+def orders_list(request):
+    orders = Order.objects.all()
+
+    return render(request, "orders_list.html", {
+        "orders": orders,
+    })
+
+def orders_approve_next(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+
+    if order.status < 3:
+        order.status += 1
+        order.save()
+    else:
+        messages.info(request, "Đơn hàng đã hoàn tất, không thể duyệt tiếp")
+
+    return redirect("orders_list")
+
+@require_http_methods(["GET"])
+def orders_detail(request, pk):
+    orders = get_object_or_404(Order, pk=pk)
+
+    if request.method == "POST":
+        new_status = request.POST.get("status")
+        orders.status = int(new_status)
+        orders.save()
+
+        messages.success(request, "Cập nhật trạng thái đơn hàng thành công!")
+        return redirect("order_detail", order_id=orders.id)
+
+    return render(request, "orders_detail.html", {
+        "order": orders,
+    })
+
+

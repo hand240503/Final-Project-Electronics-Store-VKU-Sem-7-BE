@@ -10,6 +10,7 @@ class ProductForm(forms.ModelForm):
             "id", "name", "description", "price",
             "discount_price", "brand", "category"
         ]
+        
 class DocumentForm(forms.ModelForm):
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
     ALLOWED_TYPES = {

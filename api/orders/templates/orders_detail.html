@@ -1,0 +1,248 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Chi tiết đơn hàng</title>
+        <!-- Bootstrap từ file tải về -->
+        <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
+        <!-- Font Awesome -->
+        <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
+        <!-- Custom CSS -->
+        <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
+        <style>
+                .detail-section {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    border-left: 4px solid #667eea;
+                    margin-bottom: 20px;
+                }
+
+                .detail-row {
+                    display: flex;
+                    justify-content: space-between;
+                    padding-bottom: 15px;
+                    margin-bottom: 15px;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+
+                .detail-row:last-child {
+                    padding-bottom: 0;
+                    margin-bottom: 0;
+                    border-bottom: none;
+                }
+
+                .detail-label {
+                    font-weight: 700;
+                    color: #2c3e50;
+                    font-size: 14px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    min-width: 180px;
+                }
+
+                .detail-label i {
+                    color: #667eea;
+                    font-size: 16px;
+                }
+
+                .detail-value {
+                    color: #555;
+                    font-size: 14px;
+                    font-weight: 500;
+                    text-align: right;
+                    flex: 1;
+                }
+
+                .detail-value strong {
+                    color: #2c3e50;
+                }
+
+                .price-highlight {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: #fff;
+                    padding: 10px 16px;
+                    border-radius: 6px;
+                    font-size: 18px;
+                    font-weight: 700;
+                    display: inline-block;
+                }
+
+                .badge-status {
+                    display: inline-block;
+                    padding: 8px 14px;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    font-size: 13px;
+                }
+
+                .action-buttons {
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 20px;
+                }
+
+                .action-buttons a {
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    text-decoration: none;
+                    font-weight: 600;
+                    font-size: 14px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    transition: all 0.3s ease;
+                }
+
+                .btn-back {
+                    background: #e0e0e0;
+                    color: #333;
+                }
+
+                .btn-back:hover {
+                    background: #d0d0d0;
+                }
+
+                .btn-edit {
+                    background: #667eea;
+                    color: #fff;
+                }
+
+                .btn-edit:hover {
+                    background: #5568d3;
+                }
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <div class="col-md-2 sidebar">
+                    <div class="text-white ps-3 mb-4"
+                         style="border-bottom: 1px solid rgba(255,255,255,0.2);
+                                padding: 20px;
+                                padding-right: 40px;
+                                padding-top: 10px;
+                                text-align: center">
+                        <h4 style="margin: 0;">
+                            <i class="fas fa-cog"></i> ADMIN
+                        </h4>
+                    </div>
+                    <a href="{% url 'product_list' %}"><i class="fas fa-box"></i> Danh sách sản phẩm</a>
+                    <a href="{% url 'product_create' %}"><i class="fas fa-plus"></i> Thêm sản phẩm</a>
+                    <a href="#"><i class="fas fa-tags"></i> Danh mục</a>
+                    <a href="#"><i class="fas fa-user"></i> Khách hàng</a>
+                    <a href="{% url 'orders_list' %}"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
+                </div>
+                <!-- Main Content -->
+                <div class="col-md-10 main-content">
+                    <!-- Thông báo thành công -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show mt-3"
+                                 role="alert">
+                                {{ message }}
+                                <button type="button"
+                                        class="btn-close"
+                                        data-bs-dismiss="alert"
+                                        aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <div class="page-header">
+                        <div>
+                            <h1>
+                                <i class="fas fa-shopping-cart"></i> Chi tiết đơn hàng: {{ order.order_code }}
+                            </h1>
+                        </div>
+                    </div>
+                    <!-- Thông tin chung -->
+                    <div class="detail-section">
+                        <h5 style="margin-bottom: 20px; color: #2c3e50;">
+                            <i class="fas fa-info-circle"></i> Thông tin chung
+                        </h5>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-hashtag"></i> ID</span>
+                            <span class="detail-value">{{ order.id }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-barcode"></i> Mã đơn hàng</span>
+                            <span class="detail-value"><strong>{{ order.order_code }}</strong></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-user-tie"></i> Tên người nhận</span>
+                            <span class="detail-value"><strong>{{ order.address_full_name }}</strong></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-phone"></i> Số điện thoại</span>
+                            <span class="detail-value">{{ order.address_phone }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Địa chỉ</span>
+                            <span class="detail-value">{{ order.address_line }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Phường/Xã</span>
+                            <span class="detail-value">{{ order.ward|default:"Không có" }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Quận/Huyện</span>
+                            <span class="detail-value">{{ order.district|default:"Không có" }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Thành phố</span>
+                            <span class="detail-value">{{ order.city|default:"Không có" }}</span>
+                        </div>
+                    </div>
+                    <!-- Thông tin giá tiền -->
+                    <div class="detail-section">
+                        <h5 style="margin-bottom: 20px; color: #2c3e50;">
+                            <i class="fas fa-tag"></i> Giá tiền
+                        </h5>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-coins"></i> Tổng tiền</span>
+                            <span class="detail-value"><span class="price-highlight">{{ order.total_price|floatformat:0 }}₫</span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-tag"></i> Mã giảm giá</span>
+                            <span class="detail-value">{{ order.discount_code|default:"Không có" }}</span>
+                        </div>
+                    </div>
+                    <!-- Thông tin trạng thái -->
+                    <div class="detail-section">
+                        <h5 style="margin-bottom: 20px; color: #2c3e50;">
+                            <i class="fas fa-check-circle"></i> Trạng thái
+                        </h5>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fas fa-tasks"></i> Trạng thái đơn</span>
+                            <span class="detail-value">
+                                {% if order.status == 0 %}
+                                    <span class="badge-status" style="background: #fff3cd; color: #856404;">Chờ xác nhận</span>
+                                {% elif order.status == 1 %}
+                                    <span class="badge-status" style="background: #d1ecf1; color: #0c5460;">Chờ lấy hàng</span>
+                                {% elif order.status == 2 %}
+                                    <span class="badge-status" style="background: #d4edda; color: #155724;">Chờ giao hàng</span>
+                                {% elif order.status == 3 %}
+                                    <span class="badge-status" style="background: #f8d7da; color: #721c24;">Đã giao</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Hành động -->
+                    <div class="action-buttons">
+                        <a href="{% url 'orders_list' %}" class="btn-back">
+                            <i class="fas fa-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Bootstrap JS từ file tải về -->
+        <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    </body>
+</html>
