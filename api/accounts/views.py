@@ -12,16 +12,13 @@ from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import MyTokenObtainPairSerializer
-from .models import RegistrationOTP
+from .serializers import MyTokenObtainPairSerializer, ProfileSerializer
+from .models import RegistrationOTP, UserAddress
 from utils.email_utils import send_otp_email
 from .serializers import UserDetailSerializer
 from rest_framework.permissions import IsAuthenticated
-
-from .models import UserAddress
 from .serializers import UserAddressSerializer
-
-
+from .models import Profile
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
@@ -69,6 +66,15 @@ class RegisterView(APIView):
         )
 
         # =============================
+        # CREATE PROFILE (Tự động)
+        # =============================
+        Profile.objects.create(
+            user=user,
+            name=first_name,  # Set name = first_name ban đầu
+            email=email       # Set email vào profile
+        )
+
+        # =============================
         # CREATE OTP
         # =============================
         otp_code = str(random.randint(1000, 9999))
@@ -96,6 +102,7 @@ class RegisterView(APIView):
 
         return response
 
+
 class VerifyOTPView(APIView):
     def post(self, request):
         email = request.data.get("email")
@@ -118,10 +125,19 @@ class VerifyOTPView(APIView):
 
         # Xác nhận thành công, kích hoạt user
         user.is_active = True
-        user.save()  # lưu thay đổi
+        user.save()
 
         # Tạo token
         refresh = RefreshToken.for_user(user)
+
+        # Lấy hoặc tạo profile
+        profile, created = Profile.objects.get_or_create(
+            user=user,
+            defaults={
+                'name': user.first_name,
+                'email': user.email
+            }
+        )
 
         # Xóa OTP sau khi xác thực
         otp_record.delete()
@@ -129,9 +145,15 @@ class VerifyOTPView(APIView):
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-            "username": user.username,
-            "email": user.email,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+            },
+            "profile": ProfileSerializer(profile).data
         }, status=status.HTTP_200_OK)
+
 
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -145,6 +167,15 @@ class UserDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # Lấy hoặc tạo profile
+        profile, created = Profile.objects.get_or_create(
+            user=user,
+            defaults={
+                'name': user.first_name,
+                'email': user.email
+            }
+        )
+
         data = {
             "id": user.id,
             "username": user.username,
@@ -152,9 +183,73 @@ class UserDetailView(APIView):
             "first_name": user.first_name,
             "is_active": user.is_active,
             "date_joined": user.date_joined,
+            "profile": ProfileSerializer(profile).data
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class ProfileDetailView(APIView):
+    """
+    GET /api/accounts/profile/
+    Lấy profile của user hiện tại
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Lấy hoặc tạo profile
+        profile, created = Profile.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'name': request.user.first_name,
+                'email': request.user.email
+            }
+        )
+
+        return Response(
+            ProfileSerializer(profile).data,
+            status=status.HTTP_200_OK
+        )
+
+
+class UpdateProfileView(APIView):
+    """
+    PUT /api/accounts/profile/update/
+    Cập nhật profile của user hiện tại
+    """
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        # Lấy hoặc tạo profile
+        profile, created = Profile.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'name': request.user.first_name,
+                'email': request.user.email
+            }
+        )
+
+        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "detail": "Invalid data",
+                    "errors": serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        updated_profile = serializer.save()
+
+        return Response(
+            {
+                "detail": "Profile updated successfully",
+                "profile": ProfileSerializer(updated_profile).data
+            },
+            status=status.HTTP_200_OK
+        )
+
 
 class AddUserAddressView(APIView):
     permission_classes = [IsAuthenticated]
@@ -188,6 +283,7 @@ class AddUserAddressView(APIView):
             status=status.HTTP_201_CREATED
         )
 
+
 class UserAddressByUserIdView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -219,6 +315,8 @@ class UserAddressByUserIdView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
 class UpdateUserAddressView(APIView):
     permission_classes = [IsAuthenticated]
 
