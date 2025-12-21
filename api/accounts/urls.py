@@ -10,6 +10,8 @@ from .views import (
     UserAddressByUserIdView,
     UpdateUserAddressView,
     DeleteUserAddressView,
+    ProfileDetailView,
+    UpdateProfileView,
 )
 
 urlpatterns = [
@@ -22,4 +24,8 @@ urlpatterns = [
     path('addresses/user/<int:user_id>/', UserAddressByUserIdView.as_view(), name='user-address-by-user'),
     path('addresses/<int:address_id>/update/', UpdateUserAddressView.as_view(), name='update_address'),
     path('addresses/<int:address_id>/delete/', DeleteUserAddressView.as_view(), name='delete_address'),
+
+    # ===== PROFILE =====
+    path('profile/', ProfileDetailView.as_view(), name='profile-detail'),
+    path('profile/update/', UpdateProfileView.as_view(), name='profile-update'),
 ]

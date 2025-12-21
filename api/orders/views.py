@@ -10,6 +10,12 @@ from .serializers import OrderSerializer
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.utils import timezone
+from datetime import timedelta
+
+# ===== IMPORT NOTIFICATION SERVICE =====
+from utils.notification_service import NotificationService
+
 
 class OrderCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -55,10 +61,21 @@ class OrderCreateView(APIView):
                 variant_id=variant_id
             ).delete()
 
+        # ===== GỬI NOTIFICATION ĐẶT HÀNG THÀNH CÔNG =====
+        try:
+            NotificationService.send_order_notification(
+                user_id=user.id,
+                order_id=order.id,
+                status='placed'
+            )
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+
         return Response(
             {"message": "Order created successfully", "order_id": order.id},
             status=http_status.HTTP_201_CREATED
         )
+
 
 class OrdersByUserView(APIView):
     permission_classes = [IsAuthenticated]
@@ -73,6 +90,7 @@ class OrdersByUserView(APIView):
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data, status=http_status.HTTP_200_OK)
 
+
 class OrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -85,57 +103,368 @@ class OrderDetailView(APIView):
         serializer = OrderSerializer(order, context={'request': request})
         return Response(serializer.data, status=http_status.HTTP_200_OK)
 
+
 class CancelOrderAPIView(APIView):
+    """
+    POST /api/orders/cancel/{order_id}/
+    Hủy đơn hàng
+    
+    Logic: Chỉ cho phép hủy đơn ở trạng thái "Chờ xác nhận" (status = 0)
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, order_id):
         try:
             order = Order.objects.get(id=order_id, user=request.user)
         except Order.DoesNotExist:
-            return Response({"success": False, "message": "Đơn hàng không tồn tại"}, status=http_status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"success": False, "message": "Đơn hàng không tồn tại"}, 
+                status=http_status.HTTP_404_NOT_FOUND
+            )
 
-        if order.status != 0:  # Chỉ cho hủy đơn "Chờ người bán gửi hàng"
-            return Response({"success": False, "message": "Không thể hủy đơn hàng này"}, status=http_status.HTTP_400_BAD_REQUEST)
+        if order.status != 0:  # Chỉ cho hủy đơn "Chờ xác nhận"
+            return Response(
+                {"success": False, "message": "Chỉ có thể hủy đơn hàng ở trạng thái 'Chờ xác nhận'"}, 
+                status=http_status.HTTP_400_BAD_REQUEST
+            )
 
-        order.status = 5  # 5 = Đã hủy
+        order.status = 5  # 5 = Cancelled
         order.save()
 
+        # ===== GỬI NOTIFICATION ĐƠN HÀNG BỊ HỦY =====
+        try:
+            NotificationService.send_noti(
+                user_id=request.user.id,
+                type_code='order_cancelled',
+                title='Đơn hàng đã hủy',
+                content=f'Đơn hàng {order.order_code} đã được hủy thành công',
+                redirect_url=f'/orders/{order.id}',
+                metadata={'order_id': order.id, 'order_code': order.order_code}
+            )
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+
         return Response({"success": True, "message": "Đã hủy đơn hàng"})
+
+
+class ReturnOrderAPIView(APIView):
+    """
+    POST /api/orders/return/{order_id}/
+    Yêu cầu trả hàng
     
+    Logic:
+    - Đơn hàng phải ở trạng thái "Đã giao" (status = 3)
+    - is_return phải = 2 (chưa xử lý - mặc định)
+    - Thời gian kể từ khi giao hàng (status = 3) không quá 7 ngày
+    - Sau khi yêu cầu: status = 4 (Đang trong quá trình trả hàng), is_return = 2 (Đang xem xét)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id, user=request.user)
+        except Order.DoesNotExist:
+            print(f"[RETURN ORDER] Order {order_id} not found for user {request.user.id}")
+            return Response(
+                {"success": False, "message": "Đơn hàng không tồn tại"}, 
+                status=http_status.HTTP_404_NOT_FOUND
+            )
+        
+        print(f"[RETURN ORDER] Order {order_id} - Status: {order.status}, is_return: {order.is_return}, updated_at: {order.updated_at}")
+
+        # Kiểm tra trạng thái đơn hàng - Phải ở trạng thái "Đã giao" (3)
+        if order.status != 3:
+            print(f"[RETURN ORDER] Invalid status: {order.status} (expected 3)")
+            return Response(
+                {
+                    "success": False, 
+                    "message": f"Chỉ có thể trả hàng đơn đã giao thành công. Trạng thái hiện tại: {order.get_status_display()}"
+                }, 
+                status=http_status.HTTP_400_BAD_REQUEST
+            )
+
+        # Kiểm tra is_return - Phải = 2 (chưa xử lý)
+        if order.is_return != 2:
+            print(f"[RETURN ORDER] Invalid is_return: {order.is_return} (expected 2)")
+            if order.is_return == 1:
+                return Response(
+                    {
+                        "success": False, 
+                        "message": "Yêu cầu trả hàng đã được chấp nhận trước đó"
+                    }, 
+                    status=http_status.HTTP_400_BAD_REQUEST
+                )
+            elif order.is_return == 0:
+                return Response(
+                    {
+                        "success": False, 
+                        "message": "Yêu cầu trả hàng đã bị từ chối"
+                    }, 
+                    status=http_status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                return Response(
+                    {
+                        "success": False, 
+                        "message": "Đơn hàng này đang được xem xét trả hàng"
+                    }, 
+                    status=http_status.HTTP_400_BAD_REQUEST
+                )
+
+        # Kiểm tra thời gian (7 ngày kể từ khi giao hàng - status = 3)
+        # updated_at là lúc order thay đổi status lần cuối
+        days_since_delivered = (timezone.now() - order.updated_at).days
+        
+        print(f"[RETURN ORDER] Days since delivered: {days_since_delivered}")
+        
+        if days_since_delivered > 7:
+            return Response(
+                {
+                    "success": False, 
+                    "message": f"Đã quá thời hạn trả hàng (7 ngày). Đơn hàng được giao {days_since_delivered} ngày trước."
+                }, 
+                status=http_status.HTTP_400_BAD_REQUEST
+            )
+        
+        print(f"[RETURN ORDER] All checks passed. Processing return...")
+        
+        # Cập nhật trạng thái trả hàng
+        order.status = 4  # 4 = Đang trong quá trình trả hàng
+        # is_return giữ nguyên = 2 (Đang xem xét)
+        order.save()
+        
+        print(f"[RETURN ORDER] Order {order_id} updated successfully - Status: 4, is_return: 2")
+
+        # ===== GỬI NOTIFICATION YÊU CẦU TRẢ HÀNG =====
+        try:
+            NotificationService.send_noti(
+                user_id=request.user.id,
+                type_code='order_returned',
+                title='Yêu cầu trả hàng đã được gửi',
+                content=f'Yêu cầu trả hàng cho đơn {order.order_code} đang được xem xét. Chúng tôi sẽ xử lý trong 24-48h.',
+                redirect_url=f'/orders/{order.id}',
+                metadata={
+                    'order_id': order.id, 
+                    'order_code': order.order_code,
+                    'return_date': timezone.now().isoformat()
+                }
+            )
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+
+        return Response({
+            "success": True, 
+            "message": "Yêu cầu trả hàng đã được gửi thành công",
+            "data": {
+                "order_id": order.id,
+                "order_code": order.order_code,
+                "status": order.status,
+                "is_return": order.is_return,
+                "message": "Đơn hàng đang được xem xét trả hàng"
+            }
+        })
+
+class CancelReturnRequestAPIView(APIView):
+    """
+    POST /api/orders/cancel-return/{order_id}/
+    Hủy yêu cầu trả hàng (user tự hủy)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id, user=request.user)
+        except Order.DoesNotExist:
+            return Response(
+                {"success": False, "message": "Đơn hàng không tồn tại"}, 
+                status=http_status.HTTP_404_NOT_FOUND
+            )
+
+        # Chỉ cho phép hủy khi status = 4 và is_return = 2 (đang xem xét)
+        if order.status != 4 or order.is_return != 2:
+            return Response(
+                {"success": False, "message": "Không thể hủy yêu cầu này"}, 
+                status=http_status.HTTP_400_BAD_REQUEST
+            )
+
+        # Đưa về trạng thái "Đã giao"
+        order.status = 3
+        order.save()
+
+        try:
+            NotificationService.send_noti(
+                user_id=request.user.id,
+                type_code='return_cancelled',
+                title='Đã hủy yêu cầu trả hàng',
+                content=f'Yêu cầu trả hàng cho đơn {order.order_code} đã được hủy.',
+                redirect_url=f'/orders/{order.id}',
+                metadata={'order_id': order.id, 'order_code': order.order_code}
+            )
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+
+        return Response({
+            "success": True, 
+            "message": "Đã hủy yêu cầu trả hàng"
+        })
+
+
+# ===== ADMIN VIEWS =====
 
 @require_http_methods(["GET"])
 def orders_list(request):
-    orders = Order.objects.all()
+    orders = Order.objects.all().order_by('-created_at')
+    return render(request, "orders_list.html", {"orders": orders})
 
-    return render(request, "orders_list.html", {
-        "orders": orders,
-    })
 
 def orders_approve_next(request, order_id):
+    """
+    Duyệt đơn hàng sang trạng thái tiếp theo
+    0 (Chờ xác nhận) -> 1 (Chờ lấy hàng) -> 2 (Chờ giao hàng) -> 3 (Đã giao)
+    """
     order = get_object_or_404(Order, id=order_id)
 
-    if order.status < 3:
+    if order.status < 3:  # Từ 0 -> 1 -> 2 -> 3
         order.status += 1
         order.save()
+
+        # ===== GỬI NOTIFICATION KHI THAY ĐỔI TRẠNG THÁI =====
+        try:
+            if order.status == 1:  # Chờ lấy hàng
+                NotificationService.send_noti(
+                    user_id=order.user.id,
+                    type_code='order_confirmed',
+                    title='Đơn hàng đã được xác nhận',
+                    content=f'Đơn hàng {order.order_code} đã được xác nhận và đang chờ lấy hàng.',
+                    redirect_url=f'/orders/{order.id}',
+                    metadata={'order_id': order.id, 'order_code': order.order_code}
+                )
+            elif order.status == 2:  # Chờ giao hàng
+                NotificationService.send_order_notification(
+                    user_id=order.user.id,
+                    order_id=order.id,
+                    status='shipped'
+                )
+            elif order.status == 3:  # Đã giao
+                NotificationService.send_order_notification(
+                    user_id=order.user.id,
+                    order_id=order.id,
+                    status='delivered'
+                )
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+        
+        messages.success(request, f"Đơn hàng đã chuyển sang trạng thái: {order.get_status_display()}")
     else:
-        messages.info(request, "Đơn hàng đã hoàn tất, không thể duyệt tiếp")
+        messages.info(request, "Đơn hàng đã ở trạng thái cuối, không thể duyệt tiếp")
 
     return redirect("orders_list")
 
-@require_http_methods(["GET"])
+
+@require_http_methods(["GET", "POST"])
 def orders_detail(request, pk):
-    orders = get_object_or_404(Order, pk=pk)
+    """
+    Chi tiết đơn hàng và xử lý thay đổi trạng thái
+    
+    Status:
+    0 = Chờ xác nhận
+    1 = Chờ lấy hàng
+    2 = Chờ giao hàng
+    3 = Đã giao
+    4 = Đang trong quá trình trả hàng
+    5 = Đã hủy
+    
+    is_return (khi status = 4):
+    0 = Không được trả hàng
+    1 = Được trả hàng
+    2 = Đang xem xét (mặc định)
+    """
+    order = get_object_or_404(Order, pk=pk)
 
     if request.method == "POST":
-        new_status = request.POST.get("status")
-        orders.status = int(new_status)
-        orders.save()
+        new_status = int(request.POST.get("status"))
+        is_return_action = request.POST.get("is_return_action")  # approve/reject
+        
+        old_status = order.status
+        
+        # Xử lý yêu cầu trả hàng (nếu có)
+        if is_return_action and order.status == 4:
+            if is_return_action == "approve":
+                order.is_return = 1  # Chấp nhận trả hàng
+                messages.success(request, "Đã chấp nhận yêu cầu trả hàng!")
+                
+                try:
+                    NotificationService.send_noti(
+                        user_id=order.user.id,
+                        type_code='return_approved',
+                        title='Yêu cầu trả hàng đã được chấp nhận',
+                        content=f'Yêu cầu trả hàng cho đơn {order.order_code} đã được chấp nhận. Vui lòng gửi hàng về địa chỉ của chúng tôi.',
+                        redirect_url=f'/orders/{order.id}',
+                        metadata={'order_id': order.id, 'order_code': order.order_code}
+                    )
+                except Exception as e:
+                    print(f"Error sending notification: {e}")
+                    
+            elif is_return_action == "reject":
+                order.is_return = 0  # Từ chối trả hàng
+                order.status = 3  # Đưa về trạng thái "Đã giao"
+                messages.warning(request, "Đã từ chối yêu cầu trả hàng!")
+                
+                try:
+                    NotificationService.send_noti(
+                        user_id=order.user.id,
+                        type_code='return_rejected',
+                        title='Yêu cầu trả hàng bị từ chối',
+                        content=f'Yêu cầu trả hàng cho đơn {order.order_code} không được chấp nhận.',
+                        redirect_url=f'/orders/{order.id}',
+                        metadata={'order_id': order.id, 'order_code': order.order_code}
+                    )
+                except Exception as e:
+                    print(f"Error sending notification: {e}")
+            
+            order.save()
+            return redirect("orders_detail", pk=order.id)
+        
+        # Thay đổi status thông thường
+        order.status = new_status
+        order.save()
+
+        # ===== GỬI NOTIFICATION KHI ADMIN THAY ĐỔI TRẠNG THÁI =====
+        try:
+            if new_status == 1:  # Chờ lấy hàng
+                NotificationService.send_noti(
+                    user_id=order.user.id,
+                    type_code='order_confirmed',
+                    title='Đơn hàng đã được xác nhận',
+                    content=f'Đơn hàng {order.order_code} đã được xác nhận.',
+                    redirect_url=f'/orders/{order.id}',
+                    metadata={'order_id': order.id, 'order_code': order.order_code}
+                )
+            elif new_status == 2:  # Chờ giao hàng
+                NotificationService.send_order_notification(
+                    user_id=order.user.id,
+                    order_id=order.id,
+                    status='shipped'
+                )
+            elif new_status == 3:  # Đã giao
+                NotificationService.send_order_notification(
+                    user_id=order.user.id,
+                    order_id=order.id,
+                    status='delivered'
+                )
+            elif new_status == 5:  # Đã hủy
+                NotificationService.send_noti(
+                    user_id=order.user.id,
+                    type_code='order_cancelled',
+                    title='Đơn hàng đã hủy',
+                    content=f'Đơn hàng {order.order_code} đã bị hủy',
+                    redirect_url=f'/orders/{order.id}',
+                    metadata={'order_id': order.id, 'order_code': order.order_code}
+                )
+        except Exception as e:
+            print(f"Error sending notification: {e}")
 
         messages.success(request, "Cập nhật trạng thái đơn hàng thành công!")
-        return redirect("order_detail", order_id=orders.id)
+        return redirect("orders_detail", pk=order.id)
 
-    return render(request, "orders_detail.html", {
-        "order": orders,
-    })
-
-
+    return render(request, "orders_detail.html", {"order": order})

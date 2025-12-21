@@ -191,22 +191,6 @@ class ReturnPolicy(models.Model):
 
 
 # ==========================
-# NOTIFICATIONS
-# ==========================
-class Notification(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='notifications')
-    email = models.EmailField(max_length=255)
-    notified = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'notifications'
-
-    def __str__(self):
-        return f"Notify {self.email} for {self.product.name}"
-
-
-# ==========================
 # DOCUMENTS / IMAGES
 # ==========================
 class Document(models.Model):

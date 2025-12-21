@@ -4,6 +4,7 @@ from django.utils import timezone
 from api.products.models import Product, ProductVariant
 import uuid  # dùng để tạo order_code tự động
 
+
 class Order(models.Model):
     STATUS_CHOICES = [
         (0, 'Pending'),           # just created
@@ -14,28 +15,54 @@ class Order(models.Model):
         (5, 'Completed'),         # order completed
     ]
 
+    IS_RETURN_CHOICES = [
+        (0, 'No return'),         # false
+        (1, 'Returned'),          # true
+        (2, 'Not processed'),     # chưa xử lý (default)
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    order_code = models.CharField(max_length=20, unique=True, editable=False, default='TEMPORDER')
+    order_code = models.CharField(
+        max_length=20,
+        unique=True,
+        editable=False,
+        default='TEMPORDER'
+    )
+
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     has_insurance = models.BooleanField(default=False)
+
     address_full_name = models.CharField(max_length=255)
     address_phone = models.CharField(max_length=20)
     address_line = models.CharField(max_length=255)
     ward = models.CharField(max_length=255, blank=True, null=True)
     district = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=255, blank=True, null=True)
+
     note = models.TextField(blank=True, null=True)
     discount_code = models.CharField(max_length=50, blank=True, null=True)
+
+    status = models.IntegerField(
+        choices=STATUS_CHOICES,
+        default=0  # Pending
+    )
+
+    # ⭐ TRẠNG THÁI TRẢ HÀNG
+    is_return = models.IntegerField(
+        choices=IS_RETURN_CHOICES,
+        default=2,   # đơn mới → chưa trả hàng
+        null=True,
+        blank=True
+    )
+
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
-    status = models.IntegerField(choices=STATUS_CHOICES, default=0)  # default 0 = Pending
 
     class Meta:
         db_table = 'orders'
 
     def save(self, *args, **kwargs):
-        if not self.order_code:
-            # Tạo mã order_code dạng: ORD + 8 ký tự ngẫu nhiên
+        if not self.order_code or self.order_code == 'TEMPORDER':
             self.order_code = f"ORD{uuid.uuid4().hex[:8].upper()}"
         super().save(*args, **kwargs)
 
@@ -44,9 +71,22 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
-    variant = models.ForeignKey(ProductVariant, on_delete=models.SET_NULL, null=True, blank=True)
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+    variant = models.ForeignKey(
+        ProductVariant,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
     quantity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=12, decimal_places=2)
 
@@ -54,4 +94,4 @@ class OrderItem(models.Model):
         db_table = 'order_items'
 
     def __str__(self):
-        return f"{self.product.name} x {self.quantity}"
+        return f"{self.product.name if self.product else 'Product'} x {self.quantity}"
