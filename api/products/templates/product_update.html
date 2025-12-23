@@ -69,28 +69,35 @@
                                             <label class="form-label fw-bold">
                                                 <i class="fas fa-image"></i> Hình ảnh sản phẩm
                                             </label>
-                                            <!-- CURRENT IMAGE PREVIEW -->
-                                            <div class="mb-3">
-                                                {% if image and image.document.file %}
-                                                    <img id="imagePreview"
-                                                         class="preview-image"
-                                                         src="{{ image.document.file }}"
-                                                         alt="Ảnh sản phẩm">
-                                                {% else %}
-                                                    <img id="imagePreview"
-                                                         class="preview-image"
-                                                         src="{% static 'img/no-image.png' %}"
-                                                         alt="No image">
-                                                {% endif %}
+                                            <div class="row mb-3">
+                                                {% for img in images %}
+                                                    <div class="col-4 text-center">
+                                                        {% if img %}
+                                                            <img class="preview-image image-preview"
+                                                                 src="{{ img.document.file }}"
+                                                                 alt="Ảnh sản phẩm">
+                                                        {% else %}
+                                                            <img class="preview-image image-preview"
+                                                                 src="{% static 'img/no-image.png' %}"
+                                                                 alt="No image">
+                                                        {% endif %}
+                                                    </div>
+                                                {% endfor %}
                                             </div>
-                                            <!-- INPUT NEW IMAGE URL -->
-                                            <label class="form-label">URL ảnh mới (để thay đổi)</label>
+                                            <!-- INPUT IMAGE URL -->
+                                            <label class="form-label">URL ảnh (tối đa 3 ảnh)</label>
                                             <input type="url"
-                                                   name="image_url"
-                                                   class="form-control"
-                                                   id="imageUrlInput"
-                                                   placeholder="https://example.com/image.jpg"
-                                                   autocomplete="off">
+                                                   name="image_url_1"
+                                                   class="form-control mb-2 image-url"
+                                                   placeholder="https://example.com/image-1.jpg">
+                                            <input type="url"
+                                                   name="image_url_2"
+                                                   class="form-control mb-2 image-url"
+                                                   placeholder="https://example.com/image-2.jpg">
+                                            <input type="url"
+                                                   name="image_url_3"
+                                                   class="form-control image-url"
+                                                   placeholder="https://example.com/image-3.jpg">
                                             <div class="loading-spinner" id="loadingSpinner">
                                                 <i class="fas fa-spinner fa-spin"></i> Đang tải ảnh...
                                             </div>
@@ -181,34 +188,35 @@
         </div>
         <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
         <script>
-    const imageUrlInput = document.getElementById("imageUrlInput");
-    const imagePreview = document.getElementById("imagePreview");
+    // preview 3 ảnh URL
+    const imageInputs = document.querySelectorAll('.image-url');
+    const previewImages = document.querySelectorAll('.image-preview');
     const loadingSpinner = document.getElementById("loadingSpinner");
 
-    // 🔥 Preview ảnh đúng cách — không dùng innerHTML nữa
-    imageUrlInput.addEventListener("change", function () {
-        const url = this.value.trim();
-        if (!url) return;
+    imageInputs.forEach((input, idx) => {
+        input.addEventListener("change", () => {
+            const url = input.value.trim();
+            if (!url) return;
 
-        loadingSpinner.style.display = "block";
+            loadingSpinner.style.display = "block";
 
-        const img = new Image();
-        img.onload = function () {
-            imagePreview.src = url;
-            loadingSpinner.style.display = "none";
-        };
-        img.onerror = function () {
-            loadingSpinner.style.display = "none";
-            alert("Không thể tải ảnh từ URL. Vui lòng kiểm tra lại.");
-        };
-        img.src = url;
+            const img = new Image();
+            img.onload = function () {
+                previewImages[idx].src = url;
+                loadingSpinner.style.display = "none";
+            };
+            img.onerror = function () {
+                loadingSpinner.style.display = "none";
+                alert("Không thể tải ảnh từ URL. Vui lòng kiểm tra lại.");
+            };
+            img.src = url;
+        });
     });
 
-    // 🔥 Kiểm tra tối thiểu trước khi submit
+    // kiểm tra bắt buộc trước khi submit
     document.getElementById("productForm").addEventListener("submit", function (e) {
         const name = document.querySelector('input[name="name"]').value.trim();
         const price = document.querySelector('input[name="price"]').value.trim();
-
         if (!name || !price) {
             e.preventDefault();
             alert("Vui lòng điền đầy đủ thông tin bắt buộc.");

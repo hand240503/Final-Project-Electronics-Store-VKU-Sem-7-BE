@@ -35,67 +35,65 @@ def product_list(request):
 
 @require_http_methods(["GET", "POST"])
 def product_create(request):
-    image_obj = None 
-
     if request.method == "POST":
-        image_url = request.POST.get("image_url", "").strip()
-        form = ProductForm(request.POST, request.FILES)
+        form = ProductForm(request.POST)
 
         if form.is_valid():
             product = form.save()
 
-            if image_url:
-                try:
-                    response = requests.get(image_url)
-                    if response.status_code == 200:
-                        doc = Document()
-                        doc.file.save(
-                            "product_image.jpg",
-                            ContentFile(response.content),
-                            save=True
-                        )
-                        doc.save()
+            image_urls = [
+                request.POST.get("image_url_1"),
+                request.POST.get("image_url_2"),
+                request.POST.get("image_url_3"),
+            ]
 
-                        product.document = doc
-                        product.save()
+            for index, file in enumerate(image_urls):
+                if not file:
+                    continue
 
-                        image_obj = doc
+                doc = Document.objects.create(
+                    file=file.strip(),
+                    type=Document.IMAGE
+                )
 
-                except Exception as e:
-                    print("Lỗi tải ảnh từ URL:", e)
+                ProductDocument.objects.create(
+                    product=product,
+                    document=doc,
+                    is_main=(index == 0)
+                )
 
             return redirect("product_detail", pk=product.pk)
-        else:
-            print(form.errors)
+
     else:
         form = ProductForm()
 
-    return render(request, "product_add.html", {
-        "form": form,
-        "image": image_obj,
-    })
-
+    return render(request, "product_add.html", {"form": form})
 
 @require_http_methods(["GET"])
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
-    main_image = product.documents.filter(is_main=True).select_related("document").first()
 
+    images = product.documents.select_related("document")
+
+    main_image = images.filter(is_main=True).first()
     if not main_image:
-        main_image = product.documents.select_related("document").first()
+        main_image = images.first()
 
     return render(request, "product_detail.html", {
         "product": product,
-        "image": main_image,
+        "image": main_image,      # ảnh chính
+        "images": images,         # tất cả ảnh
     })
-
 @require_http_methods(["GET", "POST"])
 def product_update(request, pk):
     product = get_object_or_404(Product, pk=pk)
 
-    main_image = product.documents.filter(is_main=True).select_related("document").first()
-    if not main_image:
-        main_image = product.documents.select_related("document").first()
+    # Lấy danh sách ảnh hiện có
+    images = list(product.documents.select_related("document").all())
+
+    # Đảm bảo list có 3 phần tử (None nếu thiếu)
+    while len(images) < 3:
+        images.append(None)
 
     if request.method == "POST":
         form = ProductForm(request.POST, instance=product)
@@ -103,27 +101,35 @@ def product_update(request, pk):
         if form.is_valid():
             form.save()
 
-            image_url = request.POST.get("image_url", "").strip()
+            image_urls = [
+                request.POST.get("image_url_1", "").strip(),
+                request.POST.get("image_url_2", "").strip(),
+                request.POST.get("image_url_3", "").strip(),
+            ]
 
-            if image_url:
-                product.documents.update(is_main=False)
+            if any(image_urls):
+                product.documents.all().delete()
 
-                doc = Document.objects.create(
-                    file=image_url   
-                )
+                for index, file_url in enumerate(image_urls):
+                    if not file_url:
+                        continue
 
-                ProductDocument.objects.create(
-                    product=product,
-                    document=doc,
-                    is_main=True
-                )
+                    doc = Document.objects.create(
+                        file=file_url,
+                        type=Document.IMAGE
+                    )
 
-            return redirect("product_list")
+                    ProductDocument.objects.create(
+                        product=product,
+                        document=doc,
+                        is_main=(index == 0)
+                    )
+
+            return redirect("product_detail", pk=product.pk)
         else:
             print(form.errors)
     else:
         form = ProductForm(instance=product)
-
 
     return render(
         request,
@@ -131,9 +137,10 @@ def product_update(request, pk):
         {
             "form": form,
             "product": product,
-            "image": main_image,
+            "images": images,  # Luôn 3 phần tử
         }
     )
+
 
 @require_http_methods(["POST"])
 def product_delete(request, pk):
@@ -142,21 +149,12 @@ def product_delete(request, pk):
     product_docs = ProductDocument.objects.filter(product=product)
 
     for pdoc in product_docs:
-        doc = pdoc.document
-
-        if doc.file and doc.file.name:
-            doc.file.delete(save=False)
-
-        doc.delete() 
-
-    product_docs.delete()
+        pdoc.document.delete()  
+        pdoc.delete()
 
     product.delete()
 
     return redirect("product_list")
-
-
-
 
 
 # ==========================
