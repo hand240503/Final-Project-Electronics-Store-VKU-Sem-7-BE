@@ -1,0 +1,601 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chi tiết yêu cầu trả hàng - Admin</title>
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
+    <style>
+        .detail-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            color: #764ba2;
+            transform: translateX(-5px);
+        }
+
+        .detail-header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .detail-header h2 {
+            color: #2d3748;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .header-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .header-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-item label {
+            font-size: 0.85rem;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+        }
+
+        .header-item .value {
+            font-size: 1.1rem;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .order-code-display {
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .section h3 {
+            color: #2d3748;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h3 i {
+            color: #667eea;
+            font-size: 1.5rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-item label {
+            font-size: 0.85rem;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .info-item .value {
+            font-size: 1rem;
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .product-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .product-item:last-child {
+            border-bottom: none;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .product-variant {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .product-meta {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .product-qty {
+            background: #f0f0f0;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .product-price {
+            color: #667eea;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .action-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-custom {
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            border: none;
+            transition: all 0.3s;
+            cursor: pointer;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-approve {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.3);
+        }
+
+        .btn-approve:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(17, 153, 142, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-reject {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(238, 9, 121, 0.3);
+        }
+
+        .btn-reject:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(238, 9, 121, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-complete {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-complete:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-back {
+            background: #e0e0e0;
+            color: #333;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-back:hover {
+            background: #d0d0d0;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .alert-custom {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 15px 20px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+
+        .days-counter {
+            display: inline-block;
+            background: #ffe5e5;
+            color: #d63031;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .days-counter.warn {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .days-counter.safe {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .modal-custom {
+            border-radius: 15px;
+        }
+
+        .modal-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            border: none;
+        }
+
+        .modal-header-custom .btn-close {
+            filter: brightness(0) invert(1);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar">
+                <div class="text-white ps-3 mb-4" style="border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                                padding: 20px 0;
+                                text-align: center">
+                    <h4 class="m-0">
+                        <i class="fas fa-cog"></i> ADMIN
+                    </h4>
+                </div>
+                <a href="{% url 'product_list' %}">
+                    <i class="fas fa-box"></i> Danh sách sản phẩm
+                </a>
+                <a href="{% url 'product_create' %}">
+                    <i class="fas fa-plus"></i> Thêm sản phẩm
+                </a>
+                <a href="#">
+                    <i class="fas fa-tags"></i> Danh mục
+                </a>
+                <a href="#">
+                    <i class="fas fa-user"></i> Khách hàng
+                </a>
+                <a href="{% url 'orders_list' %}">
+                    <i class="fas fa-shopping-cart"></i> Đơn hàng
+                </a>
+                <a href="{% url 'returns_list' %}" class="active">
+                    <i class="fas fa-undo"></i> Trả hàng
+                </a>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 main-content">
+                <!-- Messages -->
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-custom alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle"></i> {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                <div class="detail-container">
+                    <!-- Back Link -->
+                    <a href="{% url 'returns_list' %}" class="back-link">
+                        <i class="fas fa-arrow-left"></i> Quay lại
+                    </a>
+
+                    <!-- Detail Header -->
+                    <div class="detail-header">
+                        <h2>
+                            <i class="fas fa-undo"></i> Chi tiết yêu cầu trả hàng
+                        </h2>
+
+                        <div class="header-grid">
+                            <div class="header-item">
+                                <label>Mã đơn hàng</label>
+                                <div class="value order-code-display">{{ order.order_code }}</div>
+                            </div>
+                            <div class="header-item">
+                                <label>Trạng thái trả hàng</label>
+                                <div>
+                                    {% if order.is_return == 2 %}
+                                    <span class="status-indicator status-pending">
+                                        <i class="fas fa-clock"></i> Chờ xử lý
+                                    </span>
+                                    {% elif order.is_return == 1 %}
+                                    <span class="status-indicator status-approved">
+                                        <i class="fas fa-check-circle"></i> Đã chấp nhận
+                                    </span>
+                                    {% elif order.is_return == 0 %}
+                                    <span class="status-indicator status-rejected">
+                                        <i class="fas fa-times-circle"></i> Đã từ chối
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="header-item">
+                                <label>Ngày yêu cầu trả hàng</label>
+                                <div class="value">{{ order.updated_at|date:"d/m/Y H:i" }}</div>
+                            </div>
+                            <div class="header-item">
+                                <label>Số ngày kể từ khi giao</label>
+                                <div class="value">
+                                    <span class="days-counter {% if days_since_delivery > 5 %}warn{% elif days_since_delivery > 7 %}{% endif %}">
+                                        {{ days_since_delivery }} ngày
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Info -->
+                    <div class="section">
+                        <h3>
+                            <i class="fas fa-user"></i> Thông tin khách hàng
+                        </h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Tên khách hàng</label>
+                                <div class="value">{{ order.address_full_name }}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Số điện thoại</label>
+                                <div class="value">{{ order.address_phone }}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Email</label>
+                                <div class="value">{{ order.user.email }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Address -->
+                    <div class="section">
+                        <h3>
+                            <i class="fas fa-map-marker-alt"></i> Địa chỉ giao hàng
+                        </h3>
+                        <div class="info-grid">
+                            <div class="info-item" style="grid-column: span 2;">
+                                <label>Địa chỉ</label>
+                                <div class="value">{{ order.address_line }}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Phường/Xã</label>
+                                <div class="value">{{ order.ward|default:"—" }}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Quận/Huyện</label>
+                                <div class="value">{{ order.district|default:"—" }}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Tỉnh/Thành phố</label>
+                                <div class="value">{{ order.city|default:"—" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Items -->
+                    <div class="section">
+                        <h3>
+                            <i class="fas fa-box"></i> Sản phẩm trong đơn
+                        </h3>
+                        {% for item in order.items.all %}
+                        <div class="product-item">
+                            <div>
+                                <div class="product-name">{{ item.product.name }}</div>
+                                {% if item.variant %}
+                                <div class="product-variant">{{ item.variant }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="product-meta">
+                                <span class="product-qty">x{{ item.quantity }}</span>
+                                <span class="product-price">{{ item.price|floatformat:0 }}₫</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Order Summary -->
+                    <div class="section">
+                        <h3>
+                            <i class="fas fa-receipt"></i> Tóm tắt đơn hàng
+                        </h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Tổng tiền</label>
+                                <div class="value" style="color: #667eea; font-size: 1.3rem;">{{ order.total_price|floatformat:0 }}₫</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Bảo hiểm</label>
+                                <div class="value">{% if order.has_insurance %}Có{% else %}Không{% endif %}</div>
+                            </div>
+                            {% if order.note %}
+                            <div class="info-item" style="grid-column: span 2;">
+                                <label>Ghi chú</label>
+                                <div class="value">{{ order.note }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Action Section -->
+                    {% if order.is_return == 2 %}
+                    <div class="action-section">
+                        <h3 style="color: #2d3748; font-weight: 700; margin-bottom: 20px;">
+                            <i class="fas fa-tasks" style="color: #667eea;"></i> Xử lý yêu cầu trả hàng
+                        </h3>
+
+                        <div class="warning-box">
+                            <i class="fas fa-info-circle"></i> Yêu cầu trả hàng đang chờ xử lý. Bạn có thể chấp nhận hoặc từ chối yêu cầu này.
+                        </div>
+
+                        <div class="action-buttons">
+                            <form method="post" action="{% url 'approve_return' order.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-custom btn-approve">
+                                    <i class="fas fa-check-circle"></i> Chấp nhận trả hàng
+                                </button>
+                            </form>
+
+                            <button type="button" class="btn-custom btn-reject" data-bs-toggle="modal"
+                                data-bs-target="#rejectModal">
+                                <i class="fas fa-times-circle"></i> Từ chối
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Reject Modal -->
+                    <div class="modal fade" id="rejectModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content modal-custom">
+                                <div class="modal-header modal-header-custom">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-times-circle"></i> Từ chối yêu cầu trả hàng
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="post" action="{% url 'reject_return' order.id %}">
+                                    {% csrf_token %}
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Lý do từ chối</label>
+                                            <textarea name="reason" class="form-control" rows="4"
+                                                placeholder="Nhập lý do từ chối..."
+                                                required>Không đủ điều kiện trả hàng</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                            Hủy
+                                        </button>
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="fas fa-times-circle"></i> Xác nhận từ chối
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% elif order.is_return == 1 %}
+                    <div class="action-section">
+                        <h3 style="color: #2d3748; font-weight: 700; margin-bottom: 20px;">
+                            <i class="fas fa-tasks" style="color: #667eea;"></i> Hoàn thành xử lý trả hàng
+                        </h3>
+
+                        <div class="warning-box" style="background: #d4edda; color: #155724; border-left-color: #28a745;">
+                            <i class="fas fa-check-circle"></i> Yêu cầu trả hàng đã được chấp nhận. Khi khách hàng gửi hàng về, hãy xác nhận bằng nút dưới.
+                        </div>
+
+                        <div class="action-buttons">
+                            <form method="post" action="{% url 'complete_return' order.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-custom btn-complete">
+                                    <i class="fas fa-check-double"></i> Xác nhận nhận lại hàng
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% elif order.is_return == 0 %}
+                    <div class="action-section">
+                        <div class="warning-box" style="background: #f8d7da; color: #721c24; border-left-color: #dc3545;">
+                            <i class="fas fa-times-circle"></i> Yêu cầu trả hàng đã bị từ chối. Khách hàng không thể trả hàng.
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+</body>
+
+</html>

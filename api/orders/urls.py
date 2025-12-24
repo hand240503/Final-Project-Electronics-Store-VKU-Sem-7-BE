@@ -15,4 +15,10 @@ urlpatterns = [
     path('return/<int:order_id>/', ReturnOrderAPIView.as_view(), name='return-order'),
     path('cancel-return/<int:order_id>/', CancelReturnRequestAPIView.as_view(), name='cancel-return-request'),
 
+    path('admin/returns/', views.returns_list, name='returns_list'),
+    path('admin/returns/<int:order_id>/', views.returns_detail, name='returns_detail'),
+    path('admin/returns/<int:order_id>/approve/', views.approve_return, name='approve_return'),
+    path('admin/returns/<int:order_id>/reject/', views.reject_return, name='reject_return'),
+    path('admin/returns/<int:order_id>/complete/', views.complete_return, name='complete_return'),
+
 ]

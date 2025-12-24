@@ -1,15 +1,14 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="vi">
-
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chi tiết đơn hàng #{{ order.order_code }}</title>
-    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
-    <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
-    <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
-    <style>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Chi tiết đơn hàng #{{ order.order_code }}</title>
+        <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
+        <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
+        <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
+        <style>
         /* Page Header */
         .page-header-detail {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -366,249 +365,239 @@
             font-weight: 600;
             display: inline-block;
         }
-    </style>
-</head>
-
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-2 sidebar">
-                <div class="text-white ps-3 mb-4" style="border-bottom: 1px solid rgba(255,255,255,0.2);
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <div class="col-md-2 sidebar">
+                    <div class="text-white ps-3 mb-4"
+                         style="border-bottom: 1px solid rgba(255,255,255,0.2);
                                 padding: 20px 0;
                                 text-align: center">
-                    <h4 class="m-0">
-                        <i class="fas fa-cog"></i> ADMIN
-                    </h4>
-                </div>
-                <a href="{% url 'product_list' %}">
-                    <i class="fas fa-box"></i> Danh sách sản phẩm
-                </a>
-                <a href="{% url 'product_create' %}">
-                    <i class="fas fa-plus"></i> Thêm sản phẩm
-                </a>
-                <a href="#">
-                    <i class="fas fa-tags"></i> Danh mục
-                </a>
-                <a href="#">
-                    <i class="fas fa-user"></i> Khách hàng
-                </a>
-                <a href="{% url 'orders_list' %}" class="active">
-                    <i class="fas fa-shopping-cart"></i> Đơn hàng
-                </a>
-            </div>
-
-            <!-- Main Content -->
-            <div class="col-md-10 main-content">
-                <!-- Messages -->
-                {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-custom alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle"></i> {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                {% endfor %}
-                {% endif %}
-
-                <!-- Page Header -->
-                <div class="page-header-detail">
-                    <h1>
-                        <i class="fas fa-receipt"></i> Chi tiết đơn hàng
-                        <span class="status-badge-large 
-                                {% if order.status == 0 %}status-pending
-                                {% elif order.status == 1 %}status-confirmed
-                                {% elif order.status == 2 %}status-shipping
-                                {% elif order.status == 3 %}status-completed
-                                {% endif %}">
-                            {% if order.status == 0 %}
-                            <i class="fas fa-clock"></i> Chờ xác nhận
-                            {% elif order.status == 1 %}
-                            <i class="fas fa-box"></i> Chờ lấy hàng
-                            {% elif order.status == 2 %}
-                            <i class="fas fa-shipping-fast"></i> Đang giao
-                            {% elif order.status == 3 %}
-                            <i class="fas fa-check-circle"></i> Đã giao
-                            {% endif %}
-                        </span>
-                    </h1>
-                    <div class="order-meta">
-                        <div class="order-meta-item">
-                            <i class="fas fa-barcode"></i>
-                            <strong>{{ order.order_code }}</strong>
-                        </div>
-                        <div class="order-meta-item">
-                            <i class="fas fa-calendar-alt"></i>
-                            {{ order.created_at|date:"d/m/Y H:i" }}
-                        </div>
-                        <div class="order-meta-item">
-                            <i class="fas fa-hashtag"></i>
-                            ID: {{ order.id }}
-                        </div>
+                        <h4 class="m-0">
+                            <i class="fas fa-cog"></i> ADMIN
+                        </h4>
                     </div>
-                </div>
-
-                <!-- Order Timeline -->
-                <div class="order-timeline">
-                    <h5 style="color: #2d3748; margin-bottom: 25px; font-weight: 700;">
-                        <i class="fas fa-route"></i> Tiến trình đơn hàng
-                    </h5>
-                    <div class="timeline-container">
-                        <div class="timeline-line">
-                            <div class="timeline-progress" style="width: {% if order.status == 0 %}0%
-                                                  {% elif order.status == 1 %}33%
-                                                  {% elif order.status == 2 %}66%
-                                                  {% elif order.status == 3 %}100%
-                                                  {% endif %}"></div>
-                        </div>
-                        <div class="timeline-steps">
-                            <div
-                                class="timeline-step {% if order.status >= 0 %}completed{% endif %} {% if order.status == 0 %}active{% endif %}">
-                                <div class="timeline-icon">
-                                    <i class="fas fa-file-invoice"></i>
-                                </div>
-                                <div class="timeline-label">Đặt hàng</div>
-                            </div>
-                            <div
-                                class="timeline-step {% if order.status >= 1 %}completed{% endif %} {% if order.status == 1 %}active{% endif %}">
-                                <div class="timeline-icon">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
-                                <div class="timeline-label">Xác nhận</div>
-                            </div>
-                            <div
-                                class="timeline-step {% if order.status >= 2 %}completed{% endif %} {% if order.status == 2 %}active{% endif %}">
-                                <div class="timeline-icon">
-                                    <i class="fas fa-truck"></i>
-                                </div>
-                                <div class="timeline-label">Đang giao</div>
-                            </div>
-                            <div
-                                class="timeline-step {% if order.status >= 3 %}completed{% endif %} {% if order.status == 3 %}active{% endif %}">
-                                <div class="timeline-icon">
-                                    <i class="fas fa-box-open"></i>
-                                </div>
-                                <div class="timeline-label">Hoàn thành</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Info Cards Grid -->
-                <div class="info-cards-grid">
-                    <!-- Customer Info -->
-                    <div class="info-card">
-                        <div class="info-card-header">
-                            <div class="info-card-icon customer">
-                                <i class="fas fa-user"></i>
-                            </div>
-                            <h6 class="info-card-title">Thông tin khách hàng</h6>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">
-                                <i class="fas fa-user-circle"></i> Họ tên
-                            </span>
-                            <span class="info-value">{{ order.address_full_name }}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">
-                                <i class="fas fa-phone"></i> Số điện thoại
-                            </span>
-                            <span class="info-value">{{ order.address_phone }}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">
-                                <i class="fas fa-envelope"></i> Email
-                            </span>
-                            <span class="info-value">{{ order.user.email|default:"Chưa có" }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Shipping Address -->
-                    <div class="info-card">
-                        <div class="info-card-header">
-                            <div class="info-card-icon location">
-                                <i class="fas fa-map-marked-alt"></i>
-                            </div>
-                            <h6 class="info-card-title">Địa chỉ giao hàng</h6>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">
-                                <i class="fas fa-home"></i> Địa chỉ
-                            </span>
-                            <span class="info-value">{{ order.address_line }}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">
-                                <i class="fas fa-map-pin"></i> Phường/Xã
-                            </span>
-                            <span class="info-value">{{ order.ward|default:"Không có" }}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">
-                                <i class="fas fa-map-marker-alt"></i> Quận/Huyện
-                            </span>
-                            <span class="info-value">{{ order.district|default:"Không có" }}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">
-                                <i class="fas fa-city"></i> Thành phố
-                            </span>
-                            <span class="info-value">{{ order.city|default:"Không có" }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Payment Summary -->
-                    <div class="info-card">
-                        <div class="price-summary-card">
-                            <div class="card-title">
-                                <i class="fas fa-file-invoice-dollar"></i>
-                                Chi tiết thanh toán
-                            </div>
-                            <div class="price-row">
-                                <span class="price-label">Tạm tính</span>
-                                <span class="price-value">{{ order.total_price|floatformat:0 }}₫</span>
-                            </div>
-                            <div class="price-row">
-                                <span class="price-label">Phí vận chuyển</span>
-                                <span class="price-value">Miễn phí</span>
-                            </div>
-                            {% if order.discount_code %}
-                            <div class="price-row">
-                                <span class="price-label">
-                                    Mã giảm giá
-                                    <span class="discount-badge">{{ order.discount_code }}</span>
-                                </span>
-                                <span class="price-value">-0₫</span>
-                            </div>
-                            {% endif %}
-                            <div class="price-row">
-                                <span class="price-label" style="font-size: 1.2rem;">Tổng cộng</span>
-                                <span class="price-total">{{ order.total_price|floatformat:0 }}₫</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="action-buttons-container">
-                    <a href="{% url 'orders_list' %}" class="btn-action btn-back">
-                        <i class="fas fa-arrow-left"></i> Quay lại danh sách
+                    <a href="{% url 'product_list' %}">
+                        <i class="fas fa-box"></i> Danh sách sản phẩm
                     </a>
-                    {% if order.status < 3 %} <a href="{% url 'orders_approve_next' order.id %}"
-                        class="btn-action btn-approve"
-                        onclick="return confirm('Xác nhận chuyển đơn hàng sang trạng thái tiếp theo?')">
-                        <i class="fas fa-check-circle"></i> Duyệt đơn hàng
+                    <a href="{% url 'product_create' %}">
+                        <i class="fas fa-plus"></i> Thêm sản phẩm
+                    </a>
+                    <a href="#">
+                        <i class="fas fa-tags"></i> Danh mục
+                    </a>
+                    <a href="#">
+                        <i class="fas fa-user"></i> Khách hàng
+                    </a>
+                    <a href="{% url 'orders_list' %}" class="active">
+                        <i class="fas fa-shopping-cart"></i> Đơn hàng
+                    </a>
+                    <a href="{% url 'returns_list' %}" class="active">
+                        <i class="fas fa-undo"></i> Trả hàng
+                    </a>
+                </div>
+                <!-- Main Content -->
+                <div class="col-md-10 main-content">
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-custom alert-dismissible fade show"
+                                 role="alert">
+                                <i class="fas fa-check-circle"></i> {{ message }}
+                                <button type="button"
+                                        class="btn-close"
+                                        data-bs-dismiss="alert"
+                                        aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <!-- Page Header -->
+                    <div class="page-header-detail">
+                        <h1>
+                            <i class="fas fa-receipt"></i> Chi tiết đơn hàng
+                            <span class="status-badge-large {% if order.status == 0 %}status-pending {% elif order.status == 1 %}status-confirmed {% elif order.status == 2 %}status-shipping {% elif order.status == 3 %}status-completed {% endif %}">
+                                {% if order.status == 0 %}
+                                    <i class="fas fa-clock"></i> Chờ xác nhận
+                                {% elif order.status == 1 %}
+                                    <i class="fas fa-box"></i> Chờ lấy hàng
+                                {% elif order.status == 2 %}
+                                    <i class="fas fa-shipping-fast"></i> Đang giao
+                                {% elif order.status == 3 %}
+                                    <i class="fas fa-check-circle"></i> Đã giao
+                                {% endif %}
+                            </span>
+                        </h1>
+                        <div class="order-meta">
+                            <div class="order-meta-item">
+                                <i class="fas fa-barcode"></i>
+                                <strong>{{ order.order_code }}</strong>
+                            </div>
+                            <div class="order-meta-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                {{ order.created_at|date:"d/m/Y H:i" }}
+                            </div>
+                            <div class="order-meta-item">
+                                <i class="fas fa-hashtag"></i>
+                                ID: {{ order.id }}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Order Timeline -->
+                    <div class="order-timeline">
+                        <h5 style="color: #2d3748; margin-bottom: 25px; font-weight: 700;">
+                            <i class="fas fa-route"></i> Tiến trình đơn hàng
+                        </h5>
+                        <div class="timeline-container">
+                            <div class="timeline-line">
+                                <div class="timeline-progress"
+                                     style="width: {% if order.status == 0 %}0% {% elif order.status == 1 %}33% {% elif order.status == 2 %}66% {% elif order.status == 3 %}100% {% endif %}">
+                                </div>
+                            </div>
+                            <div class="timeline-steps">
+                                <div class="timeline-step {% if order.status >= 0 %}completed{% endif %} {% if order.status == 0 %}active{% endif %}">
+                                    <div class="timeline-icon">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </div>
+                                    <div class="timeline-label">Đặt hàng</div>
+                                </div>
+                                <div class="timeline-step {% if order.status >= 1 %}completed{% endif %} {% if order.status == 1 %}active{% endif %}">
+                                    <div class="timeline-icon">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    <div class="timeline-label">Xác nhận</div>
+                                </div>
+                                <div class="timeline-step {% if order.status >= 2 %}completed{% endif %} {% if order.status == 2 %}active{% endif %}">
+                                    <div class="timeline-icon">
+                                        <i class="fas fa-truck"></i>
+                                    </div>
+                                    <div class="timeline-label">Đang giao</div>
+                                </div>
+                                <div class="timeline-step {% if order.status >= 3 %}completed{% endif %} {% if order.status == 3 %}active{% endif %}">
+                                    <div class="timeline-icon">
+                                        <i class="fas fa-box-open"></i>
+                                    </div>
+                                    <div class="timeline-label">Hoàn thành</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Info Cards Grid -->
+                    <div class="info-cards-grid">
+                        <!-- Customer Info -->
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon customer">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <h6 class="info-card-title">Thông tin khách hàng</h6>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">
+                                    <i class="fas fa-user-circle"></i> Họ tên
+                                </span>
+                                <span class="info-value">{{ order.address_full_name }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">
+                                    <i class="fas fa-phone"></i> Số điện thoại
+                                </span>
+                                <span class="info-value">{{ order.address_phone }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">
+                                    <i class="fas fa-envelope"></i> Email
+                                </span>
+                                <span class="info-value">{{ order.user.email|default:"Chưa có" }}</span>
+                            </div>
+                        </div>
+                        <!-- Shipping Address -->
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon location">
+                                    <i class="fas fa-map-marked-alt"></i>
+                                </div>
+                                <h6 class="info-card-title">Địa chỉ giao hàng</h6>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">
+                                    <i class="fas fa-home"></i> Địa chỉ
+                                </span>
+                                <span class="info-value">{{ order.address_line }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">
+                                    <i class="fas fa-map-pin"></i> Phường/Xã
+                                </span>
+                                <span class="info-value">{{ order.ward|default:"Không có" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">
+                                    <i class="fas fa-map-marker-alt"></i> Quận/Huyện
+                                </span>
+                                <span class="info-value">{{ order.district|default:"Không có" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">
+                                    <i class="fas fa-city"></i> Thành phố
+                                </span>
+                                <span class="info-value">{{ order.city|default:"Không có" }}</span>
+                            </div>
+                        </div>
+                        <!-- Payment Summary -->
+                        <div class="info-card">
+                            <div class="price-summary-card">
+                                <div class="card-title">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                    Chi tiết thanh toán
+                                </div>
+                                <div class="price-row">
+                                    <span class="price-label">Tạm tính</span>
+                                    <span class="price-value">{{ order.total_price|floatformat:0 }}₫</span>
+                                </div>
+                                <div class="price-row">
+                                    <span class="price-label">Phí vận chuyển</span>
+                                    <span class="price-value">Miễn phí</span>
+                                </div>
+                                {% if order.discount_code %}
+                                    <div class="price-row">
+                                        <span class="price-label">
+                                            Mã giảm giá
+                                            <span class="discount-badge">{{ order.discount_code }}</span>
+                                        </span>
+                                        <span class="price-value">-0₫</span>
+                                    </div>
+                                {% endif %}
+                                <div class="price-row">
+                                    <span class="price-label" style="font-size: 1.2rem;">Tổng cộng</span>
+                                    <span class="price-total">{{ order.total_price|floatformat:0 }}₫</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div class="action-buttons-container">
+                        <a href="{% url 'orders_list' %}" class="btn-action btn-back">
+                            <i class="fas fa-arrow-left"></i> Quay lại danh sách
                         </a>
+                        {% if order.status < 3 %}
+                            <a href="{% url 'orders_approve_next' order.id %}"
+                               class="btn-action btn-approve"
+                               onclick="return confirm('Xác nhận chuyển đơn hàng sang trạng thái tiếp theo?')">
+                                <i class="fas fa-check-circle"></i> Duyệt đơn hàng
+                            </a>
                         {% endif %}
-                        <a href="#" class="btn-action btn-print" onclick="window.print(); return false;">
+                        <a href="#"
+                           class="btn-action btn-print"
+                           onclick="window.print(); return false;">
                             <i class="fas fa-print"></i> In đơn hàng
                         </a>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-</body>
-
+        <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    </body>
 </html>
