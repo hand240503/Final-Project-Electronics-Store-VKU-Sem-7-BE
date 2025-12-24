@@ -1,161 +1,483 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chi tiết sản phẩm - Admin</title>
-    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
-    <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
-    <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
-  </head>
-  <body>
-    <div class="container-fluid">
-      <div class="row">
-        <!-- Sidebar giữ nguyên -->
-        <div class="col-md-2 sidebar">
-          <div class="text-white ps-3 mb-4"
-               style="border-bottom: 1px solid rgba(255,255,255,0.2);
-                      padding: 20px;
-                      padding-right: 40px;
-                      padding-top: 10px;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chi tiết sản phẩm - Admin</title>
+  <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
+  <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
+  <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
+  <style>
+    .main-image-container {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 20px;
+    }
+
+    .main-image {
+      width: 100%;
+      height: 400px;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 2px solid #e0e0e0;
+      background: #f8f9fa;
+      transition: all 0.3s ease;
+    }
+
+    .thumbnail-container {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .thumbnail {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      opacity: 0.7;
+    }
+
+    .thumbnail:hover {
+      opacity: 1;
+      transform: scale(1.05);
+      border-color: #6a5af9;
+    }
+
+    .thumbnail.active {
+      border-color: #6a5af9;
+      opacity: 1;
+      box-shadow: 0 4px 12px rgba(106, 90, 249, 0.3);
+    }
+
+    .main-badge {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: linear-gradient(135deg, #6a5af9 0%, #8b7fff 100%);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(106, 90, 249, 0.4);
+      z-index: 10;
+    }
+
+    .zoom-icon {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+
+    .zoom-icon:hover {
+      background: rgba(0, 0, 0, 0.8);
+      transform: scale(1.1);
+    }
+
+    .no-images {
+      width: 100%;
+      height: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border-radius: 12px;
+      border: 2px dashed #ddd;
+      color: #999;
+    }
+
+    .no-images i {
+      font-size: 4rem;
+      margin-bottom: 15px;
+    }
+
+    /* Modal cho zoom ảnh */
+    .image-modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.95);
+      animation: fadeIn 0.3s;
+    }
+
+    .image-modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content-custom {
+      max-width: 90%;
+      max-height: 90%;
+      animation: zoomIn 0.3s;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 20px;
+      right: 40px;
+      color: white;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .close-modal:hover {
+      color: #ff4444;
+      transform: rotate(90deg);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes zoomIn {
+      from {
+        transform: scale(0.5);
+      }
+
+      to {
+        transform: scale(1);
+      }
+    }
+
+    .image-counter {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar -->
+      <div class="col-md-2 sidebar">
+        <div class="text-white ps-3 mb-4" style="border-bottom: 1px solid rgba(255,255,255,0.2);
+                      padding: 20px 0;
                       text-align: center">
-            <h4 style="margin: 0;">
-              <i class="fas fa-cog"></i> ADMIN
-            </h4>
-          </div>
-          <a href="{% url 'product_list' %}"><i class="fas fa-box"></i> Danh sách sản phẩm</a>
-          <a href="{% url 'product_create' %}"><i class="fas fa-plus"></i> Thêm sản phẩm</a>
-          <a href="#"><i class="fas fa-tags"></i> Danh mục</a>
-          <a href="#"><i class="fas fa-user"></i> Khách hàng</a>
-          <a href="{% url 'orders_list' %}"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
+          <h4 class="m-0">
+            <i class="fas fa-cog"></i> ADMIN
+          </h4>
         </div>
-        <!-- Main content -->
-        <div class="col-md-10 main-content">
-          <div class="page-header-modern">
-            <h1>
-              <i class="fas fa-info-circle"></i> Chi tiết sản phẩm
-            </h1>
-          </div>
-          <div class="row g-4">
-            <div class="col-md-8">
-              <div class="card shadow-sm modern-card">
-                <div class="card-header modern-card-header">
-                  <h5>
-                    <i class="fas fa-cube"></i> {{ product.name }}
-                  </h5>
-                </div>
-                <div class="card-body">
-                  <!-- GRID 2 CỘT HIỆN ĐẠI -->
-                  <div class="details-grid">
-                    <div class="grid-full">
-                      <label>Hình ảnh</label>
-                      {% if images %}
-                        <!-- ẢNH CHÍNH -->
-                        {% if image %}
-                          <div class="mb-3">
-                            <img src="{{ image.document.file }}"
-                                 alt="Ảnh chính"
-                                 style="width: 260px;
-                                        border-radius: 10px;
-                                        border: 1px solid #ddd">
-                          </div>
-                        {% endif %}
-                        <!-- ẢNH PHỤ -->
-                        <div class="d-flex gap-2 flex-wrap">
-                          {% for img in images %}
-                            <img src="{{ img.document.file }}"
-                                 alt="Ảnh sản phẩm"
-                                 style="width: 90px;
-                                        height: 90px;
-                                        object-fit: cover;
-                                        border-radius: 6px;
-                                        border: 1px solid #ccc;
-                                        {% if img.is_main %}outline: 3px solid #6a5af9;{% endif %}">
-                          {% endfor %}
-                        </div>
+        <a href="{% url 'product_list' %}"><i class="fas fa-box"></i> Danh sách sản phẩm</a>
+        <a href="{% url 'product_create' %}"><i class="fas fa-plus"></i> Thêm sản phẩm</a>
+        <a href="#"><i class="fas fa-tags"></i> Danh mục</a>
+        <a href="#"><i class="fas fa-user"></i> Khách hàng</a>
+        <a href="{% url 'orders_list' %}"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
+      </div>
+
+      <!-- Main content -->
+      <div class="col-md-10 main-content">
+        <div class="page-header-modern">
+          <h1>
+            <i class="fas fa-info-circle"></i> Chi tiết sản phẩm
+          </h1>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-8">
+            <div class="card shadow-sm modern-card">
+              <div class="card-header modern-card-header">
+                <h5>
+                  <i class="fas fa-cube"></i> {{ product.name }}
+                </h5>
+              </div>
+              <div class="card-body">
+                <!-- GALLERY ẢNH -->
+                <div class="details-grid">
+                  <div class="grid-full">
+                    <label>
+                      <i class="fas fa-images"></i> Hình ảnh sản phẩm
+                    </label>
+
+                    {% if images %}
+                    <!-- ẢNH CHÍNH -->
+                    <div class="main-image-container">
+                      {% if image %}
+                      <img id="mainImage" src="{{ image.document.file }}" alt="Ảnh chính" class="main-image"
+                        data-is-main="{{ image.is_main|yesno:'true,false' }}">
+
+                      <span class="main-badge" id="mainBadge"
+                        style="display: {% if image.is_main %}block{% else %}none{% endif %}">
+                        <i class="fas fa-star"></i> Ảnh chính
+                      </span>
+
+                      <div class="zoom-icon" onclick="openModal()">
+                        <i class="fas fa-search-plus"></i>
+                      </div>
+
+                      <div class="image-counter">
+                        <span id="currentIndex">1</span> / <span id="totalImages">{{ images|length }}</span>
+                      </div>
                       {% else %}
-                        <p>Không có hình ảnh</p>
+                      <div class="no-images">
+                        <i class="fas fa-image"></i>
+                        <p>Không có ảnh</p>
+                      </div>
                       {% endif %}
                     </div>
-                    <div>
-                      <label>ID</label>
-                      <p>{{ product.id }}</p>
+
+                    <!-- THUMBNAILS -->
+                    <div class="thumbnail-container">
+                      {% for img in images %}
+                      <img src="{{ img.document.file }}" alt="Ảnh {{ forloop.counter }}"
+                        class="thumbnail {% if forloop.first %}active{% endif %}" data-full="{{ img.document.file }}"
+                        data-is-main="{{ img.is_main|yesno:'true,false' }}" data-index="{{ forloop.counter }}"
+                        onclick="changeImage(this)">
+                      {% endfor %}
                     </div>
-                    <div>
-                      <label>Tên sản phẩm</label>
-                      <p>{{ product.name }}</p>
+                    {% else %}
+                    <div class="no-images">
+                      <i class="fas fa-image"></i>
+                      <p>Chưa có hình ảnh nào</p>
                     </div>
-                    <div class="grid-full">
-                      <label>Mô tả</label>
-                      <p class="desc">{{ product.description|default:"Không có mô tả" }}</p>
-                    </div>
-                    <div>
-                      <label>Giá</label>
-                      <p>{{ product.price }}₫</p>
-                    </div>
-                    <div>
-                      <label>Giá giảm</label>
-                      <p>{{ product.discount_price }}₫</p>
-                    </div>
-                    <div>
-                      <label>Đánh giá</label>
-                      <p>{{ product.rating }}</p>
-                    </div>
-                    <div>
-                      <label>Số đánh giá</label>
-                      <p>{{ product.num_reviews }}</p>
-                    </div>
-                    <div>
-                      <label>Trạng thái</label>
-                      {% if product.is_available %}
-                        <span class="badge bg-success">Còn hàng</span>
+                    {% endif %}
+                  </div>
+
+                  <!-- THÔNG TIN SẢN PHẨM -->
+                  <div>
+                    <label>ID</label>
+                    <p>{{ product.id }}</p>
+                  </div>
+                  <div>
+                    <label>Tên sản phẩm</label>
+                    <p>{{ product.name }}</p>
+                  </div>
+                  <div class="grid-full">
+                    <label>Mô tả</label>
+                    <p class="desc">{{ product.description|default:"Không có mô tả" }}</p>
+                  </div>
+                  <div>
+                    <label>Giá</label>
+                    <p><strong>{{ product.price|floatformat:0 }}₫</strong></p>
+                  </div>
+                  <div>
+                    <label>Giá giảm</label>
+                    <p>
+                      {% if product.discount_price %}
+                      <span class="text-danger"><strong>{{ product.discount_price|floatformat:0 }}₫</strong></span>
                       {% else %}
-                        <span class="badge bg-danger">Hết hàng</span>
+                      <span class="text-muted">Không có</span>
                       {% endif %}
-                    </div>
-                    <div>
-                      <label>Phổ biến</label>
-                      <p>{{ product.is_popular|yesno:"Có,Không" }}</p>
-                    </div>
-                    <div>
-                      <label>Flash sale</label>
-                      <p>{{ product.is_sale|yesno:"Có,Không" }}</p>
-                    </div>
-                    <div>
-                      <label>Bán chạy</label>
-                      <p>{{ product.is_best_sale|yesno:"Có,Không" }}</p>
-                    </div>
-                    <div>
-                      <label>Số lượng đã bán</label>
-                      <p>{{ product.sold }}</p>
-                    </div>
+                    </p>
+                  </div>
+                  <div>
+                    <label>Đánh giá</label>
+                    <p>
+                      <i class="fas fa-star text-warning"></i> {{ product.rating|default:"0" }}
+                    </p>
+                  </div>
+                  <div>
+                    <label>Số đánh giá</label>
+                    <p>{{ product.num_reviews|default:"0" }} đánh giá</p>
+                  </div>
+                  <div>
+                    <label>Trạng thái</label>
+                    {% if product.is_available %}
+                    <span class="badge bg-success">
+                      <i class="fas fa-check-circle"></i> Còn hàng
+                    </span>
+                    {% else %}
+                    <span class="badge bg-danger">
+                      <i class="fas fa-times-circle"></i> Hết hàng
+                    </span>
+                    {% endif %}
+                  </div>
+                  <div>
+                    <label>Phổ biến</label>
+                    <p>
+                      {% if product.is_popular %}
+                      <i class="fas fa-fire text-danger"></i> Có
+                      {% else %}
+                      Không
+                      {% endif %}
+                    </p>
+                  </div>
+                  <div>
+                    <label>Flash sale</label>
+                    <p>
+                      {% if product.is_sale %}
+                      <i class="fas fa-bolt text-warning"></i> Có
+                      {% else %}
+                      Không
+                      {% endif %}
+                    </p>
+                  </div>
+                  <div>
+                    <label>Bán chạy</label>
+                    <p>
+                      {% if product.is_best_sale %}
+                      <i class="fas fa-trophy text-success"></i> Có
+                      {% else %}
+                      Không
+                      {% endif %}
+                    </p>
+                  </div>
+                  <div>
+                    <label>Số lượng đã bán</label>
+                    <p><strong>{{ product.sold|default:"0" }}</strong> sản phẩm</p>
                   </div>
                 </div>
               </div>
             </div>
-            <!-- Action -->
-            <div class="col-md-4">
-              <div class="card shadow-sm action-card">
-                <div class="card-header bg-light">
-                  <h6>
-                    <i class="fas fa-cog"></i> Hành động
-                  </h6>
-                </div>
-                <div class="card-body">
-                  <a href="{% url 'product_update' product.id %}"
-                     class="btn btn-warning w-100 mb-3">
-                    <i class="fas fa-edit"></i> Sửa sản phẩm
-                  </a>
-                  <a href="{% url 'product_list' %}" class="btn btn-secondary w-100">
-                    <i class="fas fa-arrow-left"></i> Quay lại
-                  </a>
-                </div>
+          </div>
+
+          <!-- Action Card -->
+          <div class="col-md-4">
+            <div class="card shadow-sm action-card">
+              <div class="card-header bg-light">
+                <h6>
+                  <i class="fas fa-cog"></i> Hành động
+                </h6>
+              </div>
+              <div class="card-body">
+                <a href="{% url 'product_update' product.id %}" class="btn btn-warning w-100 mb-3">
+                  <i class="fas fa-edit"></i> Sửa sản phẩm
+                </a>
+                <a href="{% url 'product_list' %}" class="btn btn-secondary w-100">
+                  <i class="fas fa-arrow-left"></i> Quay lại danh sách
+                </a>
+              </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card shadow-sm mt-3">
+              <div class="card-header bg-light">
+                <h6>
+                  <i class="fas fa-info-circle"></i> Thông tin thêm
+                </h6>
+              </div>
+              <div class="card-body">
+                <p class="small mb-2">
+                  <i class="fas fa-clock text-muted"></i>
+                  <strong>Ngày tạo:</strong><br>
+                  {{ product.created_at|date:"d/m/Y H:i" }}
+                </p>
+                <p class="small mb-0">
+                  <i class="fas fa-edit text-muted"></i>
+                  <strong>Cập nhật:</strong><br>
+                  {{ product.updated_at|date:"d/m/Y H:i" }}
+                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </body>
+  </div>
+
+  <!-- Modal zoom ảnh -->
+  <div id="imageModal" class="image-modal" onclick="closeModal()">
+    <span class="close-modal">&times;</span>
+    <img id="modalImage" class="modal-content-custom" src="" alt="Zoomed Image">
+  </div>
+
+  <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+  <script>
+    // Thay đổi ảnh chính khi click thumbnail
+    function changeImage(thumbnail) {
+      const mainImage = document.getElementById('mainImage');
+      const mainBadge = document.getElementById('mainBadge');
+      const currentIndexSpan = document.getElementById('currentIndex');
+      const fullImageUrl = thumbnail.getAttribute('data-full');
+      const isMain = thumbnail.getAttribute('data-is-main') === 'true';
+      const index = thumbnail.getAttribute('data-index');
+
+      // Cập nhật ảnh chính
+      mainImage.src = fullImageUrl;
+
+      // Hiển thị/ẩn badge "Ảnh chính"
+      if (isMain) {
+        mainBadge.style.display = 'block';
+      } else {
+        mainBadge.style.display = 'none';
+      }
+
+      // Cập nhật số thứ tự
+      currentIndexSpan.textContent = index;
+
+      // Xóa active class khỏi tất cả thumbnails
+      document.querySelectorAll('.thumbnail').forEach(thumb => {
+        thumb.classList.remove('active');
+      });
+
+      // Thêm active class cho thumbnail được chọn
+      thumbnail.classList.add('active');
+    }
+
+    // Mở modal zoom ảnh
+    function openModal() {
+      const mainImage = document.getElementById('mainImage');
+      const modal = document.getElementById('imageModal');
+      const modalImage = document.getElementById('modalImage');
+
+      modal.classList.add('show');
+      modalImage.src = mainImage.src;
+
+      // Ngăn scroll body khi modal mở
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Đóng modal
+    function closeModal() {
+      const modal = document.getElementById('imageModal');
+      modal.classList.remove('show');
+
+      // Cho phép scroll body trở lại
+      document.body.style.overflow = 'auto';
+    }
+
+    // Đóng modal khi nhấn ESC
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    });
+
+    // Ngăn modal đóng khi click vào ảnh
+    document.getElementById('modalImage').addEventListener('click', function (event) {
+      event.stopPropagation();
+    });
+  </script>
+</body>
+
 </html>

@@ -6,6 +6,7 @@ Strategies implemented:
 2. Popularity-Based Baseline for new products
 3. Hybrid approach combining collaborative + content
 4. Minimum interaction threshold
+5. Skip products with existing explicit ratings
 """
 
 from django.core.management.base import BaseCommand
@@ -29,44 +30,91 @@ class Command(BaseCommand):
     }
     
     # Cold start thresholds
-    MIN_USER_INTERACTIONS = 5  # Minimum interactions to be considered "warm"
+    MIN_USER_INTERACTIONS = 5
     MIN_PRODUCT_INTERACTIONS = 3
-    COLD_START_CONFIDENCE = 0.3  # Low confidence for cold start ratings
+    COLD_START_CONFIDENCE = 0.3
     
     def add_arguments(self, parser):
-        parser.add_argument('--clear', action='store_true')
-        parser.add_argument('--stats', action='store_true')
-        parser.add_argument('--user', type=int)
+        parser.add_argument('--clear', action='store_true',
+                          help='Clear all implicit ratings and exit (no recalculation)')
+        parser.add_argument('--stats', action='store_true',
+                          help='Show statistics only (no calculation or clearing)')
+        parser.add_argument('--user', type=int,
+                          help='Calculate for specific user ID')
         parser.add_argument('--cold-start-only', action='store_true',
                           help='Only calculate for cold start users/products')
+        parser.add_argument('--no-clear', action='store_true',
+                          help='Skip automatic clearing (keep existing implicit ratings)')
     
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('=' * 70))
         self.stdout.write(self.style.SUCCESS('🚀 IMPLICIT RATING WITH COLD START HANDLING'))
         self.stdout.write(self.style.SUCCESS('=' * 70))
         
+        # Handle --clear flag: Clear and exit
         if options['clear']:
-            self._clear_ratings()
+            self._clear_all_implicit_ratings()
+            self.stdout.write(self.style.SUCCESS('\n✅ Cleared all implicit ratings. Exiting...'))
+            return
         
+        # Handle --stats flag: Just show statistics
+        if options['stats']:
+            self._show_statistics()
+            return
+        
+        # Normal calculation mode: Clear old data first (unless --no-clear)
+        if not options.get('no_clear', False):
+            self._clear_all_implicit_ratings()
+        else:
+            self.stdout.write(self.style.WARNING('\n⚠️  Skipping auto-clear (--no-clear flag set)\n'))
+        
+        # Calculate ratings
         if options['user']:
             self._calculate_for_user(options['user'])
         else:
             self._calculate_for_all_users(options.get('cold_start_only', False))
-        
-        if options['stats']:
-            self._show_statistics()
     
     def _clear_ratings(self):
         count = Rating.objects.filter(rating_type=Rating.IMPLICIT).count()
         Rating.objects.filter(rating_type=Rating.IMPLICIT).delete()
         self.stdout.write(self.style.WARNING(f'🗑️  Deleted {count:,} ratings\n'))
     
+    def _clear_all_implicit_ratings(self):
+        """
+        Clear ALL implicit ratings before recalculation
+        This ensures fresh start and removes stale data
+        """
+        count = Rating.objects.filter(rating_type=Rating.IMPLICIT).count()
+        
+        if count > 0:
+            self.stdout.write(self.style.WARNING('\n🧹 CLEANING OLD DATA'))
+            self.stdout.write(self.style.WARNING('=' * 70))
+            self.stdout.write(f'Found {count:,} existing implicit ratings')
+            self.stdout.write('Deleting all implicit ratings...')
+            
+            Rating.objects.filter(rating_type=Rating.IMPLICIT).delete()
+            
+            self.stdout.write(self.style.SUCCESS(f'✅ Deleted {count:,} old implicit ratings'))
+            self.stdout.write(self.style.SUCCESS('Starting fresh calculation...\n'))
+        else:
+            self.stdout.write(self.style.SUCCESS('\n✨ No existing implicit ratings found. Starting fresh...\n'))
+    
+    def _get_user_explicit_products(self, user_id):
+        """
+        Get set of product IDs that user has already rated explicitly
+        These should be excluded from implicit rating calculation
+        """
+        explicit_product_ids = Rating.objects.filter(
+            user_id=user_id,
+            rating_type=Rating.EXPLICIT
+        ).values_list('product_id', flat=True)
+        
+        return set(explicit_product_ids)
+    
     def _calculate_for_all_users(self, cold_start_only=False):
         """Calculate for all users with cold start handling"""
         
-        # Get all users (not just those with interactions)
         if cold_start_only:
-            # Only cold start users
             users = self._get_cold_start_users()
             self.stdout.write(self.style.WARNING(f'❄️  Processing {len(users)} COLD START users\n'))
         else:
@@ -75,6 +123,7 @@ class Command(BaseCommand):
         
         total_saved = 0
         total_updated = 0
+        total_skipped = 0
         cold_users = 0
         warm_users = 0
         
@@ -92,9 +141,10 @@ class Command(BaseCommand):
                 self.stdout.write(f'[{idx}/{len(users)}] 🔥 User {user_id} (WARM - {interaction_count} interactions)')
                 warm_users += 1
             
-            saved, updated = self._calculate_and_save(user_id, is_cold)
+            saved, updated, skipped = self._calculate_and_save(user_id, is_cold)
             total_saved += saved
             total_updated += updated
+            total_skipped += skipped
         
         # Summary
         self.stdout.write(self.style.SUCCESS('\n' + '=' * 70))
@@ -102,7 +152,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('=' * 70))
         self.stdout.write(f'Cold start users: {cold_users}')
         self.stdout.write(f'Warm users: {warm_users}')
-        self.stdout.write(f'Created: {total_saved:,} | Updated: {total_updated:,}')
+        self.stdout.write(f'Created: {total_saved:,} | Updated: {total_updated:,} | Skipped (explicit exists): {total_skipped:,}')
     
     def _calculate_for_user(self, user_id):
         """Calculate for specific user"""
@@ -114,8 +164,8 @@ class Command(BaseCommand):
             status = "COLD START" if is_cold else "WARM"
             self.stdout.write(f'Processing {user.username} ({status} - {interaction_count} interactions)\n')
             
-            saved, updated = self._calculate_and_save(user_id, is_cold)
-            self.stdout.write(self.style.SUCCESS(f'✅ Created: {saved} | Updated: {updated}'))
+            saved, updated, skipped = self._calculate_and_save(user_id, is_cold)
+            self.stdout.write(self.style.SUCCESS(f'✅ Created: {saved} | Updated: {updated} | Skipped: {skipped}'))
             
         except User.DoesNotExist:
             self.stdout.write(self.style.ERROR(f'❌ User {user_id} not found'))
@@ -123,14 +173,18 @@ class Command(BaseCommand):
     def _calculate_and_save(self, user_id, is_cold_start):
         """Main calculation logic with cold start detection"""
         
+        # Get products user has already rated explicitly
+        explicit_products = self._get_user_explicit_products(user_id)
+        
+        if explicit_products:
+            self.stdout.write(f'  ⚠️  User has {len(explicit_products)} explicit ratings - will skip those products')
+        
         if is_cold_start:
-            # Use cold start strategy
             ratings = self._calculate_cold_start(user_id)
         else:
-            # Use normal collaborative filtering
             ratings = self._calculate_warm_user(user_id)
         
-        return self._save_ratings(ratings, user_id, is_cold_start)
+        return self._save_ratings(ratings, user_id, is_cold_start, explicit_products)
     
     def _calculate_warm_user(self, user_id):
         """
@@ -154,14 +208,13 @@ class Command(BaseCommand):
             product_data[log.product_id]['interactions'].append(age_days)
             product_data[log.product_id]['events'][log.event] += 1
         
-        # Calculate ratings with ABSOLUTE thresholds (not relative)
+        # Calculate ratings with ABSOLUTE thresholds
         ratings = {}
         
         for product_id, data in product_data.items():
             raw_score = data['total_score']
             
             # Use absolute scoring with diminishing returns
-            # This prevents single product from always getting 5.0
             if raw_score >= 500:
                 rating = 5.0
             elif raw_score >= 300:
@@ -193,15 +246,10 @@ class Command(BaseCommand):
         interaction_count = CollectorLog.objects.filter(user_id=user_id).count()
         
         if interaction_count == 0:
-            # Strategy 1: Pure Cold Start (no interactions at all)
             return self._popularity_baseline()
-        
         elif interaction_count < self.MIN_USER_INTERACTIONS:
-            # Strategy 2: Sparse Data (some interactions but not enough)
             return self._hybrid_cold_start(user_id)
-        
         else:
-            # Should not reach here, but fallback
             return self._calculate_warm_user(user_id)
     
     def _popularity_baseline(self):
@@ -210,20 +258,17 @@ class Command(BaseCommand):
         Return popular products as baseline recommendations
         """
         
-        # Get global popularity scores
         popular_products = CollectorLog.objects.values('product_id').annotate(
             interaction_count=Count('id'),
             buy_count=Count('id', filter=Q(event='buy')),
             cart_count=Count('id', filter=Q(event='addToCart'))
-        ).order_by('-interaction_count')[:20]  # Top 20 popular products
+        ).order_by('-interaction_count')[:20]
         
         ratings = {}
         
         for idx, product in enumerate(popular_products):
-            # Score based on popularity rank and quality of interactions
-            base_score = 5.0 - (idx * 0.15)  # Decreasing from 5.0
+            base_score = 5.0 - (idx * 0.15)
             
-            # Boost for quality interactions
             quality_boost = (
                 product['buy_count'] * 0.1 + 
                 product['cart_count'] * 0.05
@@ -232,7 +277,7 @@ class Command(BaseCommand):
             final_score = base_score + quality_boost
             
             ratings[product['product_id']] = {
-                'score': max(min(final_score, 5.0), 2.5),  # Range: 2.5-5.0
+                'score': max(min(final_score, 5.0), 2.5),
                 'confidence': self.COLD_START_CONFIDENCE,
                 'is_cold': True
             }
@@ -245,20 +290,16 @@ class Command(BaseCommand):
         Combine their sparse data with popularity baseline
         """
         
-        # Get user's limited interactions
         user_ratings = self._calculate_warm_user(user_id)
-        
-        # Get popularity baseline
         popular_ratings = self._popularity_baseline()
         
-        # Merge: prioritize user data, fill gaps with popularity
         hybrid_ratings = {}
         
         # Add user's interactions (higher weight)
         for product_id, rating_info in user_ratings.items():
             hybrid_ratings[product_id] = {
                 'score': rating_info['score'],
-                'confidence': self.COLD_START_CONFIDENCE + 0.2,  # Slightly higher confidence
+                'confidence': self.COLD_START_CONFIDENCE + 0.2,
                 'is_cold': True
             }
         
@@ -275,14 +316,12 @@ class Command(BaseCommand):
     
     def _get_cold_start_users(self):
         """Get list of cold start users"""
-        # Users with less than MIN_USER_INTERACTIONS
         user_interactions = CollectorLog.objects.values('user_id').annotate(
             count=Count('id')
         ).filter(count__lt=self.MIN_USER_INTERACTIONS)
         
         cold_user_ids = [u['user_id'] for u in user_interactions]
         
-        # Also include users with ZERO interactions
         all_user_ids = User.objects.values_list('id', flat=True)
         users_with_interactions = CollectorLog.objects.values_list('user_id', flat=True).distinct()
         zero_interaction_users = set(all_user_ids) - set(users_with_interactions)
@@ -302,26 +341,31 @@ class Command(BaseCommand):
         interaction_count = len(data['interactions'])
         event_diversity = len(data['events'])
         
-        # Base confidence from interaction count
-        count_confidence = min(interaction_count / 20, 1.0)  # Max at 20 interactions
+        count_confidence = min(interaction_count / 20, 1.0)
+        diversity_bonus = min(event_diversity / 4, 0.3)
         
-        # Diversity bonus
-        diversity_bonus = min(event_diversity / 4, 0.3)  # Max 0.3 bonus for 4 event types
-        
-        # Recency bonus (interactions in last 7 days)
         recent_count = sum(1 for age in data['interactions'] if age <= 7)
-        recency_bonus = min(recent_count / 5, 0.2)  # Max 0.2 bonus
+        recency_bonus = min(recent_count / 5, 0.2)
         
         total_confidence = count_confidence + diversity_bonus + recency_bonus
         
         return min(total_confidence, 1.0)
     
-    def _save_ratings(self, ratings, user_id, is_cold_start):
-        """Save ratings with cold start indicator"""
+    def _save_ratings(self, ratings, user_id, is_cold_start, explicit_products):
+        """
+        Save ratings with cold start indicator
+        Skip products that already have explicit ratings
+        """
         saved = 0
         updated = 0
+        skipped = 0
         
         for product_id, rating_info in ratings.items():
+            # CRITICAL: Skip if user already has explicit rating for this product
+            if product_id in explicit_products:
+                skipped += 1
+                continue
+            
             try:
                 user = User.objects.get(id=user_id)
                 product = Product.objects.get(id=product_id)
@@ -345,8 +389,12 @@ class Command(BaseCommand):
             except (User.DoesNotExist, Product.DoesNotExist):
                 continue
         
-        self.stdout.write(f'  ✅ Created: {saved} | Updated: {updated}')
-        return saved, updated
+        if skipped > 0:
+            self.stdout.write(f'  ✅ Created: {saved} | Updated: {updated} | ⚠️  Skipped (explicit exists): {skipped}')
+        else:
+            self.stdout.write(f'  ✅ Created: {saved} | Updated: {updated}')
+        
+        return saved, updated, skipped
     
     def _show_statistics(self):
         """Show statistics including cold start metrics"""
@@ -364,9 +412,16 @@ class Command(BaseCommand):
         users_count = ratings.values('user').distinct().count()
         products_count = ratings.values('product').distinct().count()
         
-        self.stdout.write(f'Total ratings: {total:,}')
-        self.stdout.write(f'Users with ratings: {users_count:,}')
-        self.stdout.write(f'Products rated: {products_count:,}')
+        self.stdout.write(f'Total implicit ratings: {total:,}')
+        self.stdout.write(f'Users with implicit ratings: {users_count:,}')
+        self.stdout.write(f'Products rated implicitly: {products_count:,}')
+        
+        # Explicit vs Implicit comparison
+        explicit_count = Rating.objects.filter(rating_type=Rating.EXPLICIT).count()
+        self.stdout.write(f'\n📊 Rating Type Distribution:')
+        self.stdout.write(f'  Explicit ratings: {explicit_count:,}')
+        self.stdout.write(f'  Implicit ratings: {total:,}')
+        self.stdout.write(f'  Total ratings: {explicit_count + total:,}')
         
         # Cold start stats
         cold_ratings = ratings.filter(source='cold_start').count()
@@ -390,9 +445,7 @@ class Command(BaseCommand):
         self.stdout.write(f'\n👥 User Interaction Distribution:')
         
         all_users = User.objects.all().count()
-        users_with_ratings = users_count
         
-        # Count users by interaction level
         user_interactions = CollectorLog.objects.values('user_id').annotate(
             count=Count('id')
         )
@@ -406,3 +459,16 @@ class Command(BaseCommand):
         self.stdout.write(f'  Sparse (1-4): {sparse:,}')
         self.stdout.write(f'  Moderate (5-19): {moderate:,}')
         self.stdout.write(f'  Active (20+): {active:,}')
+        
+        # Check for conflicts (shouldn't exist now)
+        self.stdout.write(f'\n🔍 Data Integrity Check:')
+        users_with_both = Rating.objects.values('user_id', 'product_id').annotate(
+            explicit_count=Count('id', filter=Q(rating_type=Rating.EXPLICIT)),
+            implicit_count=Count('id', filter=Q(rating_type=Rating.IMPLICIT))
+        ).filter(explicit_count__gt=0, implicit_count__gt=0).count()
+        
+        if users_with_both > 0:
+            self.stdout.write(self.style.ERROR(f'  ⚠️  Found {users_with_both} products with BOTH explicit and implicit ratings!'))
+            self.stdout.write(self.style.ERROR(f'      This should not happen - please investigate!'))
+        else:
+            self.stdout.write(self.style.SUCCESS(f'  ✅ No conflicts found - explicit and implicit ratings are properly separated'))
