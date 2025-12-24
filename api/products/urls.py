@@ -7,7 +7,6 @@ from .views import (
     ProductSearchView,
 )
 from . import views
-
 urlpatterns = [
     path('admin/', views.product_list, name="product_list"),
     path('admin/create/', views.product_create, name="product_create"),
