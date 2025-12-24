@@ -1,567 +1,543 @@
+"""
+Django Management Command: Generate Ratings with User Groups
+Location: api/rating/management/commands/generate_ratings.py
+
+Usage:
+    python manage.py generate_ratings --clear
+"""
+
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from api.products.models import Product
 from api.rating.models import Rating
 import random
-from typing import Dict
 
 class Command(BaseCommand):
-    help = 'Generate synthetic explicit ratings for recommendation system'
+    help = 'Generate synthetic ratings with realistic user behavior patterns'
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            '--users',
-            type=int,
-            default=None,
-            help='Number of users to generate ratings for (default: all users)'
-        )
-        parser.add_argument(
-            '--coverage',
-            type=float,
-            default=0.7,
-            help='Percentage of products each user rates (0.0-1.0, default: 0.7 = 70%%)'
-        )
-        parser.add_argument(
-            '--min-ratings',
-            type=int,
-            default=5,
-            dest='min_ratings',
-            help='Minimum ratings per user (default: 5)'
-        )
-        parser.add_argument(
-            '--clear',
-            action='store_true',
-            help='Clear all explicit ratings before generating'
-        )
+        parser.add_argument('--users', type=int, default=None)
+        parser.add_argument('--clear', action='store_true')
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS('='*60))
-        self.stdout.write(self.style.SUCCESS('Django Rating Data Generator'))
-        self.stdout.write(self.style.SUCCESS('='*60))
+        self.stdout.write(self.style.SUCCESS('='*70))
+        self.stdout.write(self.style.SUCCESS('SMART RATING GENERATOR WITH USER GROUPS'))
+        self.stdout.write(self.style.SUCCESS('='*70))
         
         if options['clear']:
             self.clear_ratings()
         
-        coverage = options['coverage']
-        min_ratings = options['min_ratings']
-        user_limit = options['users']
-        
-        self.generate_ratings(coverage, min_ratings, user_limit)
-        self.validate_ratings()
+        self.generate_ratings(options['users'])
 
     def clear_ratings(self):
-        """Clear all explicit ratings"""
         count = Rating.objects.filter(rating_type=Rating.EXPLICIT).count()
         Rating.objects.filter(rating_type=Rating.EXPLICIT).delete()
-        self.stdout.write(self.style.WARNING(f'✓ Deleted {count:,} explicit ratings'))
+        self.stdout.write(self.style.WARNING(f'✓ Deleted {count:,} ratings\n'))
 
-    # =========================
-    # CONSTANTS
-    # =========================
-    GROUP_SELECTION_RATES = {
-        1: {"apple_primary": 0.9, "random": 0.1},
-        2: {"smartphone": 0.6, "watch_audio": 0.8, "tv_storage": 0.95},
-        3: {"smartphone": 0.5, "wear_audio": 0.8, "tv_tablet": 0.95},
-        4: {"laptop": 0.6, "minipc": 0.8, "others": 0.95},
-        5: {"dell": 0.38, "hp": 0.665, "lenovo": 0.95},
-        6: {"sony_camera": 0.5, "canon_camera": 0.8, "audio": 0.95},
-        7: {"ps5": 0.4, "gaming_main": 0.8, "gaming_audio": 0.95},
-        8: {"smart_home": 0.4, "monitors": 0.7, "xiaomi_devices": 0.9},
-        9: {"xiaomi": 0.4, "oppo": 0.7, "vivo": 0.9},
-        10: {"hp_laptop": 0.3, "dell_laptop": 0.55, "lenovo_laptop": 0.75, "printers": 0.9}
+    # =========================================================================
+    # PRODUCT GROUPS - Nhóm sản phẩm theo brand/category
+    # =========================================================================
+    PRODUCT_GROUPS = {
+        # Apple Ecosystem
+        'APPLE_PHONES': ['iPhone 15 Pro'],
+        'APPLE_LAPTOPS': ['MacBook Pro 16'],
+        'APPLE_TABLETS': ['iPad Pro 12.9'],
+        'APPLE_WATCHES': ['Apple Watch Series 9'],
+        'APPLE_AUDIO': ['Apple AirPods Pro 2'],
+        'APPLE_ACCESSORIES': [
+            'Apple Magic Keyboard',
+            'Apple MagSafe Charger',
+            'Apple Silicone Case',
+            'Apple Pencil 2',
+            'Apple USB-C to 3.5mm Audio Adapter'
+        ],
+        
+        # Samsung Ecosystem
+        'SAMSUNG_PHONES': ['Galaxy S23 Ultra'],
+        'SAMSUNG_TABLETS': ['Samsung Galaxy Tab S9'],
+        'SAMSUNG_WATCHES': ['Samsung Galaxy Watch 6'],
+        'SAMSUNG_MONITORS': ['Samsung Odyssey G7'],
+        'SAMSUNG_ACCESSORIES': [
+            'Samsung S Pen',
+            'Samsung Clear View Case',
+            'Samsung Wireless Charging Pad'
+        ],
+        
+        # Premium Audio
+        'PREMIUM_AUDIO': [
+            'Sony WH-1000XM5',
+            'Bose QuietComfort 45'
+        ],
+        
+        # Professional Laptops
+        'BUSINESS_LAPTOPS': [
+            'Dell XPS 13',
+            'Lenovo ThinkPad X1 Carbon',
+            'Microsoft Surface Laptop 5'
+        ],
+        
+        # Gaming Laptops
+        'GAMING_LAPTOPS': [
+            'Asus ROG Strix G15',
+            'Acer Predator Helios 300',
+            'Asus TUF Gaming F15',
+            'Acer Nitro 5'
+        ],
+        
+        # Gaming Peripherals
+        'GAMING_PERIPHERALS': [
+            'Razer DeathAdder V2',
+            'Logitech G502 Mouse',
+            'Samsung Odyssey G7'
+        ],
+        
+        # Professional Cameras
+        'CAMERAS': [
+            'Sony A7 IV Camera',
+            'Canon EOS R6'
+        ],
+        'CAMERA_ACCESSORIES': [
+            'Sony SD Card 128GB',
+            'Sony NP-FZ100 Battery',
+            'Sony Camera Carrying Case'
+        ],
+        
+        # Office Equipment
+        'MICE_KEYBOARDS': ['Logitech MX Master 3'],
+        'MONITORS': [
+            'LG 27UK850 Monitor',
+            'Dell UltraSharp U2723QE'
+        ],
+        'PRINTERS': [
+            'HP LaserJet Pro M404',
+            'HP Envy 6055 Printer'
+        ],
+        'PRINTER_SUPPLIES': [
+            'HP 80A Toner Cartridge',
+            'HP Premium Printing Paper'
+        ],
+        
+        # Dell Accessories
+        'DELL_ACCESSORIES': [
+            'Dell USB-C Dock',
+            'Dell Wireless Mouse',
+            'Dell Laptop Stand'
+        ],
+        
+        # Microsoft Products
+        'MICROSOFT_DEVICES': [
+            'Microsoft Surface Pro 9',
+            'Microsoft Surface Laptop 5'
+        ],
+        
+        # Sony Products
+        'SONY_PHONES': ['Sony Xperia 1 V']
     }
 
-    # Rating ranges (scale 1-5, integers only)
-    # Distribution: 20% low (1-2) | 30% mid (3) | 50% high (4-5)
-    RATING_WEIGHTS = {
-        'low': 0.20,    # 1-2 stars: 20%
-        'mid': 0.30,    # 3 stars: 30%
-        'high': 0.50    # 4-5 stars: 50%
-    }
-
-    # =========================
-    # RATING FUNCTIONS
-    # =========================
-    def rate_high(self):
-        """Return 4 or 5 stars for high ratings"""
-        return random.choice([4, 5])
-
-    def rate_mid(self):
-        """Return 3 stars for mid ratings"""
-        return 3
-
-    def rate_low(self):
-        """Return 1 or 2 stars for low ratings"""
-        return random.choice([1, 2])
-
-    def rate_good(self):
-        """Return 3 or 4 stars for good ratings"""
-        return random.choice([3, 4])
-
-    def rate_very_high(self):
-        """Return 5 stars for very high ratings"""
-        return 5
-
-    # =========================
-    # PRODUCT MAPPING
-    # =========================
-    def get_product_mapping(self):
-        """Map all products by ID"""
-        products = Product.objects.select_related('brand', 'category').all()
-        return {product.id: product for product in products}
-
-    def get_product_groups(self, product_map):
-        """Create product groups from product mapping"""
+    # =========================================================================
+    # USER GROUPS - 8 nhóm người dùng với behavior khác nhau
+    # =========================================================================
+    USER_GROUPS = {
+        1: {
+            'name': 'Apple Ecosystem Lovers',
+            'description': 'Người dùng trung thành với Apple, mua cả hệ sinh thái',
+            'weight': 0.15,  # 15% users
+            'preferences': {
+                'APPLE_PHONES': 0.95,
+                'APPLE_LAPTOPS': 0.85,
+                'APPLE_TABLETS': 0.75,
+                'APPLE_WATCHES': 0.80,
+                'APPLE_AUDIO': 0.90,
+                'APPLE_ACCESSORIES': 0.70,
+                'PREMIUM_AUDIO': 0.40,
+                'MONITORS': 0.30
+            },
+            'ratings': {
+                'APPLE_PHONES': 'very_high',
+                'APPLE_LAPTOPS': 'very_high',
+                'APPLE_TABLETS': 'high',
+                'APPLE_WATCHES': 'high',
+                'APPLE_AUDIO': 'very_high',
+                'APPLE_ACCESSORIES': 'high',
+                'SAMSUNG_PHONES': 'low',
+                'SAMSUNG_TABLETS': 'low',
+                'default': 'mid'
+            }
+        },
         
-        def filter_by_brand_category(brand=None, category=None, exclude_category=None):
-            pids = []
-            for pid, product in product_map.items():
-                if brand and product.brand.name != brand:
-                    continue
-                if category:
-                    if isinstance(category, list):
-                        if product.category.name not in category:
-                            continue
-                    else:
-                        if product.category.name != category:
-                            continue
-                if exclude_category and product.category.name == exclude_category:
-                    continue
-                pids.append(pid)
-            return pids
+        2: {
+            'name': 'Samsung Enthusiasts',
+            'description': 'Người dùng thích Samsung và Android',
+            'weight': 0.12,  # 12% users
+            'preferences': {
+                'SAMSUNG_PHONES': 0.95,
+                'SAMSUNG_TABLETS': 0.70,
+                'SAMSUNG_WATCHES': 0.75,
+                'SAMSUNG_MONITORS': 0.60,
+                'SAMSUNG_ACCESSORIES': 0.65,
+                'PREMIUM_AUDIO': 0.50,
+                'BUSINESS_LAPTOPS': 0.40
+            },
+            'ratings': {
+                'SAMSUNG_PHONES': 'very_high',
+                'SAMSUNG_TABLETS': 'high',
+                'SAMSUNG_WATCHES': 'high',
+                'SAMSUNG_ACCESSORIES': 'high',
+                'APPLE_PHONES': 'low',
+                'APPLE_LAPTOPS': 'low',
+                'default': 'mid'
+            }
+        },
         
-        groups = {
-            'APPLE_ALL': filter_by_brand_category(brand='Apple'),
-            'SAMSUNG_SMARTPHONE': filter_by_brand_category(brand='Samsung', category='Smartphone'),
-            'SAMSUNG_WATCH_AUDIO': filter_by_brand_category(brand='Samsung', category=['Audio', 'Smartwatch/Wearable']),
-            'SAMSUNG_TV_STORAGE': filter_by_brand_category(brand='Samsung', category=['Display/TV', 'Storage', 'Tablet']),
-            'XIAOMI_SMARTPHONE': filter_by_brand_category(brand='Xiaomi', category='Smartphone'),
-            'XIAOMI_WEAR_AUDIO': filter_by_brand_category(brand='Xiaomi', category=['Audio', 'Smartwatch/Wearable']),
-            'XIAOMI_TV_TABLET': filter_by_brand_category(brand='Xiaomi', category=['Display/TV', 'Tablet']),
-            'ASUS_LAPTOP': filter_by_brand_category(brand='Asus', category='Laptop/PC'),
-            'ASUS_MINIPC': filter_by_brand_category(brand='Asus', category='Mini PC'),
-            'ASUS_OTHERS': filter_by_brand_category(brand='Asus', exclude_category='Laptop/PC'),
-            'LENOVO_LAPTOP': filter_by_brand_category(brand='Lenovo', category='Laptop/PC'),
-            'DELL_LAPTOP': filter_by_brand_category(brand='Dell', category='Laptop/PC'),
-            'HP_LAPTOP': filter_by_brand_category(brand='HP', category='Laptop/PC'),
-            'CANON_CAMERA': filter_by_brand_category(brand='Canon', category='Camera'),
-            'SONY_CAMERA': filter_by_brand_category(brand='Sony', category='Camera'),
-            'SONY_AUDIO': filter_by_brand_category(brand='Sony', category='Audio'),
-            'LOGITECH_AUDIO': filter_by_brand_category(brand='Logitech', category='Audio'),
-            'LOGITECH_PERIPHERALS': filter_by_brand_category(brand='Logitech', category='Input Devices/Peripherals'),
-            'GOOGLE_SMARTHOME': filter_by_brand_category(brand='Google', category=['Smart Home/Appliance', 'Tablet', 'Audio']),
-            'PS5': filter_by_brand_category(brand='Sony', category='Gaming Console'),
-            'GAMING_CONSOLES': filter_by_brand_category(category='Gaming Console'),
-            'PRINTERS': filter_by_brand_category(category='Printer'),
-            'MONITORS': filter_by_brand_category(category='Display/TV'),
-            'BUDGET_XIAOMI': filter_by_brand_category(brand='Xiaomi', category='Smartphone'),
-            'BUDGET_OPPO': filter_by_brand_category(brand='Oppo', category='Smartphone'),
-            'BUDGET_VIVO': filter_by_brand_category(brand='Vivo', category='Smartphone'),
-            'ALL_PRODUCT_IDS': list(product_map.keys())
+        3: {
+            'name': 'Professional Creatives',
+            'description': 'Photographer, videographer, content creator',
+            'weight': 0.10,  # 10% users
+            'preferences': {
+                'CAMERAS': 0.95,
+                'CAMERA_ACCESSORIES': 0.90,
+                'APPLE_LAPTOPS': 0.70,
+                'BUSINESS_LAPTOPS': 0.60,
+                'PREMIUM_AUDIO': 0.65,
+                'MONITORS': 0.75,
+                'APPLE_TABLETS': 0.50
+            },
+            'ratings': {
+                'CAMERAS': 'very_high',
+                'CAMERA_ACCESSORIES': 'high',
+                'APPLE_LAPTOPS': 'high',
+                'MONITORS': 'high',
+                'PREMIUM_AUDIO': 'high',
+                'GAMING_LAPTOPS': 'low',
+                'GAMING_PERIPHERALS': 'low',
+                'default': 'mid'
+            }
+        },
+        
+        4: {
+            'name': 'Hardcore Gamers',
+            'description': 'Chơi game chuyên nghiệp',
+            'weight': 0.12,  # 12% users
+            'preferences': {
+                'GAMING_LAPTOPS': 0.90,
+                'GAMING_PERIPHERALS': 0.95,
+                'MONITORS': 0.70,
+                'PREMIUM_AUDIO': 0.60,
+                'SAMSUNG_MONITORS': 0.75
+            },
+            'ratings': {
+                'GAMING_LAPTOPS': 'very_high',
+                'GAMING_PERIPHERALS': 'very_high',
+                'SAMSUNG_MONITORS': 'high',
+                'MONITORS': 'high',
+                'PREMIUM_AUDIO': 'high',
+                'BUSINESS_LAPTOPS': 'low',
+                'APPLE_PHONES': 'low',
+                'default': 'mid'
+            }
+        },
+        
+        5: {
+            'name': 'Business Professionals',
+            'description': 'Dân văn phòng, làm việc remote',
+            'weight': 0.18,  # 18% users (nhóm lớn nhất)
+            'preferences': {
+                'BUSINESS_LAPTOPS': 0.90,
+                'MONITORS': 0.75,
+                'MICE_KEYBOARDS': 0.85,
+                'PRINTERS': 0.60,
+                'PRINTER_SUPPLIES': 0.55,
+                'DELL_ACCESSORIES': 0.65,
+                'MICROSOFT_DEVICES': 0.50,
+                'PREMIUM_AUDIO': 0.45
+            },
+            'ratings': {
+                'BUSINESS_LAPTOPS': 'very_high',
+                'MONITORS': 'high',
+                'MICE_KEYBOARDS': 'high',
+                'DELL_ACCESSORIES': 'high',
+                'PRINTERS': 'high',
+                'GAMING_LAPTOPS': 'low',
+                'GAMING_PERIPHERALS': 'low',
+                'default': 'mid'
+            }
+        },
+        
+        6: {
+            'name': 'Tech Enthusiasts',
+            'description': 'Thích thử công nghệ mới, đa dạng brands',
+            'weight': 0.13,  # 13% users
+            'preferences': {
+                'APPLE_PHONES': 0.60,
+                'SAMSUNG_PHONES': 0.55,
+                'SONY_PHONES': 0.70,
+                'PREMIUM_AUDIO': 0.80,
+                'MICROSOFT_DEVICES': 0.65,
+                'CAMERAS': 0.50,
+                'GAMING_LAPTOPS': 0.45,
+                'BUSINESS_LAPTOPS': 0.50
+            },
+            'ratings': {
+                'SONY_PHONES': 'high',
+                'PREMIUM_AUDIO': 'high',
+                'MICROSOFT_DEVICES': 'high',
+                'default': 'good'
+            }
+        },
+        
+        7: {
+            'name': 'Audio Lovers',
+            'description': 'Đam mê âm thanh, nghe nhạc chuyên nghiệp',
+            'weight': 0.08,  # 8% users
+            'preferences': {
+                'PREMIUM_AUDIO': 0.95,
+                'APPLE_AUDIO': 0.75,
+                'APPLE_PHONES': 0.60,
+                'SAMSUNG_PHONES': 0.50,
+                'APPLE_TABLETS': 0.45
+            },
+            'ratings': {
+                'PREMIUM_AUDIO': 'very_high',
+                'APPLE_AUDIO': 'high',
+                'APPLE_PHONES': 'high',
+                'GAMING_PERIPHERALS': 'low',
+                'default': 'mid'
+            }
+        },
+        
+        8: {
+            'name': 'Budget Conscious Users',
+            'description': 'Người dùng tiết kiệm, ưu tiên giá trị',
+            'weight': 0.12,  # 12% users
+            'preferences': {
+                'BUSINESS_LAPTOPS': 0.60,
+                'MICE_KEYBOARDS': 0.70,
+                'SAMSUNG_PHONES': 0.65,
+                'MONITORS': 0.55,
+                'PRINTERS': 0.50
+            },
+            'ratings': {
+                'BUSINESS_LAPTOPS': 'good',
+                'SAMSUNG_PHONES': 'good',
+                'MICE_KEYBOARDS': 'high',
+                'APPLE_PHONES': 'low',
+                'APPLE_LAPTOPS': 'very_low',
+                'CAMERAS': 'low',
+                'default': 'mid'
+            }
         }
-        
-        # Gaming products
-        gaming_laptop_brands = ['Asus', 'Lenovo', 'Dell', 'HP']
-        gaming_laptops = []
-        for pid, product in product_map.items():
-            if product.brand.name in gaming_laptop_brands and product.category.name == 'Laptop/PC':
-                gaming_laptops.append(pid)
-        
-        gaming_audio = []
-        for pid, product in product_map.items():
-            if product.category.name in ['Audio', 'Input Devices/Peripherals']:
-                gaming_audio.append(pid)
-        
-        groups['GAMING_MAIN'] = list(set(groups['GAMING_CONSOLES'] + gaming_laptops))
-        groups['GAMING_AUDIO'] = gaming_audio
-        
-        return groups
+    }
 
-    def sample_product_for_group(self, group_id: int, product_groups: dict) -> int:
-        """Select product based on user group"""
-        r = random.random()
-        rates = self.GROUP_SELECTION_RATES.get(group_id, {})
-        
-        if group_id == 1:
-            if r < rates["apple_primary"]:
-                return random.choice(product_groups['APPLE_ALL']) if product_groups['APPLE_ALL'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            return random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        elif group_id == 2:
-            if r < rates["smartphone"]:
-                return random.choice(product_groups['SAMSUNG_SMARTPHONE']) if product_groups['SAMSUNG_SMARTPHONE'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["watch_audio"]:
-                return random.choice(product_groups['SAMSUNG_WATCH_AUDIO']) if product_groups['SAMSUNG_WATCH_AUDIO'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["tv_storage"]:
-                return random.choice(product_groups['SAMSUNG_TV_STORAGE']) if product_groups['SAMSUNG_TV_STORAGE'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            return random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        elif group_id == 3:
-            if r < rates["smartphone"]:
-                return random.choice(product_groups['XIAOMI_SMARTPHONE']) if product_groups['XIAOMI_SMARTPHONE'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["wear_audio"]:
-                return random.choice(product_groups['XIAOMI_WEAR_AUDIO']) if product_groups['XIAOMI_WEAR_AUDIO'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["tv_tablet"]:
-                return random.choice(product_groups['XIAOMI_TV_TABLET']) if product_groups['XIAOMI_TV_TABLET'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            return random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        elif group_id == 4:
-            if r < rates["laptop"]:
-                return random.choice(product_groups['ASUS_LAPTOP']) if product_groups['ASUS_LAPTOP'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["minipc"]:
-                return random.choice(product_groups['ASUS_MINIPC']) if product_groups['ASUS_MINIPC'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["others"]:
-                return random.choice(product_groups['ASUS_OTHERS']) if product_groups['ASUS_OTHERS'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            return random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        elif group_id == 5:
-            if r < rates["dell"]:
-                return random.choice(product_groups['DELL_LAPTOP']) if product_groups['DELL_LAPTOP'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["hp"]:
-                return random.choice(product_groups['HP_LAPTOP']) if product_groups['HP_LAPTOP'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["lenovo"]:
-                return random.choice(product_groups['LENOVO_LAPTOP']) if product_groups['LENOVO_LAPTOP'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            return random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        elif group_id == 6:
-            if r < rates["sony_camera"]:
-                return random.choice(product_groups['SONY_CAMERA']) if product_groups['SONY_CAMERA'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["canon_camera"]:
-                return random.choice(product_groups['CANON_CAMERA']) if product_groups['CANON_CAMERA'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["audio"]:
-                audio_products = (product_groups.get('SONY_AUDIO', []) + product_groups.get('LOGITECH_AUDIO', []))
-                return random.choice(audio_products) if audio_products else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            return random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        elif group_id == 7:
-            if r < rates["ps5"]:
-                return random.choice(product_groups['PS5']) if product_groups['PS5'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["gaming_main"]:
-                return random.choice(product_groups['GAMING_MAIN']) if product_groups['GAMING_MAIN'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["gaming_audio"]:
-                return random.choice(product_groups['GAMING_AUDIO']) if product_groups['GAMING_AUDIO'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            return random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        elif group_id == 8:
-            if r < rates["smart_home"]:
-                return random.choice(product_groups['GOOGLE_SMARTHOME']) if product_groups['GOOGLE_SMARTHOME'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["monitors"]:
-                return random.choice(product_groups['MONITORS']) if product_groups['MONITORS'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["xiaomi_devices"]:
-                xiaomi_devices = (product_groups.get('XIAOMI_TV_TABLET', []) + product_groups.get('XIAOMI_WEAR_AUDIO', []))
-                return random.choice(xiaomi_devices) if xiaomi_devices else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            return random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        elif group_id == 9:
-            if r < rates["xiaomi"]:
-                return random.choice(product_groups['BUDGET_XIAOMI']) if product_groups['BUDGET_XIAOMI'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["oppo"]:
-                return random.choice(product_groups['BUDGET_OPPO']) if product_groups['BUDGET_OPPO'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["vivo"]:
-                return random.choice(product_groups['BUDGET_VIVO']) if product_groups['BUDGET_VIVO'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            samsung_phones = product_groups.get('SAMSUNG_SMARTPHONE', [])
-            return random.choice(samsung_phones) if samsung_phones else random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        elif group_id == 10:
-            if r < rates["hp_laptop"]:
-                return random.choice(product_groups['HP_LAPTOP']) if product_groups['HP_LAPTOP'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["dell_laptop"]:
-                return random.choice(product_groups['DELL_LAPTOP']) if product_groups['DELL_LAPTOP'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["lenovo_laptop"]:
-                return random.choice(product_groups['LENOVO_LAPTOP']) if product_groups['LENOVO_LAPTOP'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            elif r < rates["printers"]:
-                return random.choice(product_groups['PRINTERS']) if product_groups['PRINTERS'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-            return random.choice(product_groups['MONITORS']) if product_groups['MONITORS'] else random.choice(product_groups['ALL_PRODUCT_IDS'])
-        
-        return random.choice(product_groups['ALL_PRODUCT_IDS'])
+    # =========================================================================
+    # RATING LEVELS
+    # =========================================================================
+    def get_rating_score(self, level):
+        """Trả về rating score theo level"""
+        if level == 'very_high':
+            return 5  # Always 5 stars
+        elif level == 'high':
+            # 70% → 5 stars, 30% → 4 stars
+            return 5 if random.random() < 0.7 else 4
+        elif level == 'good':
+            # 50% → 4 stars, 50% → 3 stars
+            return random.choice([3, 4])
+        elif level == 'mid':
+            # 20% → 4-5, 40% → 3, 40% → 1-2
+            r = random.random()
+            if r < 0.2:
+                return random.choice([4, 5])
+            elif r < 0.6:
+                return 3
+            else:
+                return random.choice([1, 2])
+        elif level == 'low':
+            # 80% → 1-2 stars, 20% → 3 stars
+            return random.choice([1, 2]) if random.random() < 0.8 else 3
+        elif level == 'very_low':
+            return random.choice([1, 2])  # Always low
+        else:
+            return 3  # Default
 
-    def sample_rating(self, group_id: int, product_id: int, product_map: dict) -> int:
-        """
-        Generate rating based on user group and product
-        Returns integer 1-5 (star rating)
-        Distribution: 20% low (1-2) | 30% mid (3) | 50% high (4-5)
-        """
-        product = product_map[product_id]
-        brand = product.brand.name
-        category = product.category.name
+    # =========================================================================
+    # MAIN LOGIC
+    # =========================================================================
+    def get_products_by_names(self):
+        """Lấy products và map theo groups"""
+        all_products = []
+        for products in self.PRODUCT_GROUPS.values():
+            all_products.extend(products)
         
-        # Determine rating level based on group preferences
-        rating_level = None
+        products = Product.objects.filter(name__in=all_products)
         
-        if group_id == 1:  # Apple Loyalist
-            if brand == "Apple" and category in ["Smartphone", "Laptop/PC", "Tablet", "Audio", "Smartwatch/Wearable"]:
-                rating_level = 'high'
-            elif brand == "Apple":
-                rating_level = 'good'
-            else:
-                rating_level = 'low'
+        # Map products to groups
+        product_to_group = {}
+        for group_name, product_names in self.PRODUCT_GROUPS.items():
+            for name in product_names:
+                product_to_group[name] = group_name
         
-        elif group_id == 2:  # Samsung Heavy Users
-            if brand == "Samsung":
-                rating_level = 'high'
-            elif brand == "Apple":
-                rating_level = 'low'
-            else:
-                rating_level = 'mid'
+        # Create product map with group info
+        product_map = {}
+        for p in products:
+            product_map[p.id] = {
+                'product': p,
+                'group': product_to_group.get(p.name, 'OTHER')
+            }
         
-        elif group_id == 3:  # Xiaomi + Smart Devices
-            if brand == "Xiaomi":
-                rating_level = 'high'
-            elif brand in ["Google", "Samsung"] and category in ["Smart Home/Appliance", "Display/TV"]:
-                rating_level = 'good'
-            else:
-                rating_level = 'mid'
+        self.stdout.write(f'✓ Found {len(product_map)}/45 products')
         
-        elif group_id == 4:  # Asus Laptop Enthusiast
-            if brand == "Asus" and category in ["Laptop/PC", "Mini PC", "Display/TV"]:
-                rating_level = 'high'
-            elif category == "Laptop/PC" and brand in ["Dell", "HP", "Lenovo"]:
-                rating_level = 'good'
-            elif category == "Smartphone":
-                rating_level = 'low'
-            else:
-                rating_level = 'mid'
+        # Check missing
+        found_names = {p.name for p in products}
+        missing = set(all_products) - found_names
+        if missing:
+            self.stdout.write(self.style.WARNING(f'⚠ Missing {len(missing)} products'))
         
-        elif group_id == 5:  # Laptop Mixed Brand
-            if category == "Laptop/PC" and brand in ["Dell", "HP", "Lenovo"]:
-                rating_level = 'high'
-            else:
-                rating_level = 'mid'
-        
-        elif group_id == 6:  # Camera & Audio Creator
-            if brand in ["Canon", "Sony"] and category == "Camera":
-                rating_level = 'high'
-            elif category == "Audio":
-                rating_level = 'good'
-            else:
-                rating_level = 'low'
-        
-        elif group_id == 7:  # Gaming Hardcore
-            if category == "Gaming Console":
-                rating_level = 'high'
-            elif category == "Laptop/PC" and brand in ["Asus", "Lenovo", "Dell", "HP"]:
-                rating_level = 'high'
-            elif category in ["Audio", "Input Devices/Peripherals"]:
-                rating_level = 'good'
-            elif category == "Smartphone":
-                rating_level = 'low'
-            else:
-                rating_level = 'mid'
-        
-        elif group_id == 8:  # Smart Home Family
-            if brand == "Google" and category in ["Smart Home/Appliance", "Tablet", "Audio"]:
-                rating_level = 'high'
-            elif category == "Display/TV":
-                rating_level = 'high'
-            elif brand in ["Samsung", "Xiaomi"] and category in ["Display/TV", "Smart Home/Appliance", "Tablet"]:
-                rating_level = 'good'
-            else:
-                rating_level = 'mid'
-        
-        elif group_id == 9:  # Budget Android Mixed
-            if brand in ["Xiaomi", "Oppo", "Vivo"] and category == "Smartphone":
-                rating_level = 'high'
-            elif brand == "Samsung" and category == "Smartphone":
-                rating_level = 'mid'
-            elif brand == "Apple" and category == "Smartphone":
-                rating_level = 'low'
-            else:
-                rating_level = 'mid'
-        
-        elif group_id == 10:  # Office Workers
-            if category == "Laptop/PC" and brand in ["HP", "Dell", "Lenovo"]:
-                rating_level = 'high'
-            elif category == "Printer":
-                rating_level = 'good'
-            elif category == "Display/TV":
-                rating_level = 'mid'
-            elif category == "Smartphone":
-                rating_level = 'low'
-            else:
-                rating_level = 'mid'
-        
-        # Generate actual rating based on level with controlled distribution
-        if rating_level == 'high':
-            # 80% get high rating, 15% mid, 5% low
-            r = random.random()
-            if r < 0.80:
-                return self.rate_high()  # 4-5 stars
-            elif r < 0.95:
-                return self.rate_mid()   # 3 stars
-            else:
-                return self.rate_low()   # 1-2 stars
-        
-        elif rating_level == 'good':
-            # 60% get high, 30% mid, 10% low
-            r = random.random()
-            if r < 0.60:
-                return self.rate_good()  # 3-4 stars
-            elif r < 0.90:
-                return self.rate_mid()   # 3 stars
-            else:
-                return self.rate_low()   # 1-2 stars
-        
-        elif rating_level == 'low':
-            # 80% get low rating, 15% mid, 5% high
-            r = random.random()
-            if r < 0.80:
-                return self.rate_low()   # 1-2 stars
-            elif r < 0.95:
-                return self.rate_mid()   # 3 stars
-            else:
-                return self.rate_high()  # 4-5 stars
-        
-        else:  # mid or default
-            # 20% low, 30% mid, 50% high (target distribution)
-            r = random.random()
-            if r < 0.20:
-                return self.rate_low()   # 1-2 stars
-            elif r < 0.50:
-                return self.rate_mid()   # 3 stars
-            else:
-                return self.rate_high()  # 4-5 stars
+        return product_map
 
     def assign_user_groups(self, users):
-        """Assign groups to users"""
-        group_ids = list(range(1, 11))
-        group_weights = [0.12, 0.12, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.06]
+        """Gán users vào groups theo weights"""
+        group_ids = list(self.USER_GROUPS.keys())
+        weights = [self.USER_GROUPS[gid]['weight'] for gid in group_ids]
         
         user_groups = {}
-        assigned = random.choices(group_ids, weights=group_weights, k=len(users))
+        assigned = random.choices(group_ids, weights=weights, k=len(users))
         
         for idx, user in enumerate(users):
             user_groups[user.id] = assigned[idx]
         
         return user_groups
 
-    def generate_ratings(self, coverage, min_ratings, user_limit=None):
-        """Generate ratings to database with automatic calculation based on product count"""
+    def select_products_for_user(self, group_id, product_map):
+        """Chọn products mà user sẽ rate dựa trên preferences"""
+        group_config = self.USER_GROUPS[group_id]
+        preferences = group_config['preferences']
         
+        selected = []
+        
+        for product_id, info in product_map.items():
+            product_group = info['group']
+            
+            # Lấy probability từ preferences
+            prob = preferences.get(product_group, 0.15)  # Default 15% for other groups
+            
+            # Random để quyết định có rate hay không
+            if random.random() < prob:
+                selected.append(product_id)
+        
+        return selected
+
+    def generate_rating_for_product(self, group_id, product_info):
+        """Generate rating dựa trên group preferences"""
+        group_config = self.USER_GROUPS[group_id]
+        ratings = group_config['ratings']
+        
+        product_group = product_info['group']
+        
+        # Lấy rating level cho product group này
+        level = ratings.get(product_group, ratings.get('default', 'mid'))
+        
+        return self.get_rating_score(level)
+
+    def generate_ratings(self, user_limit=None):
+        """Main generation function"""
+        # Load users
         users = list(User.objects.all())
         if user_limit:
             users = users[:user_limit]
         
         if not users:
-            self.stdout.write(self.style.ERROR('❌ No users found. Please create users first.'))
+            self.stdout.write(self.style.ERROR('❌ No users found'))
             return
         
         self.stdout.write(self.style.SUCCESS(f'✓ Found {len(users)} users'))
         
-        product_map = self.get_product_mapping()
+        # Load products
+        product_map = self.get_products_by_names()
         if not product_map:
-            self.stdout.write(self.style.ERROR('❌ No products found. Please create products first.'))
+            self.stdout.write(self.style.ERROR('❌ No products found'))
             return
         
-        total_products = len(product_map)
-        self.stdout.write(self.style.SUCCESS(f'✓ Found {total_products} products'))
-        
-        # Tính toán số ratings dựa trên số sản phẩm và coverage
-        # Ví dụ: 30 products × 0.7 coverage = ~21 ratings/user
-        base_ratings = int(total_products * coverage)
-        max_ratings = total_products  # Không thể vượt quá tổng số products
-        
-        # Đảm bảo có ít nhất min_ratings
-        base_ratings = max(min_ratings, base_ratings)
-        
-        self.stdout.write(self.style.SUCCESS(f'✓ Target ratings per user: {base_ratings} (~{coverage*100:.0f}% of {total_products} products)'))
-        self.stdout.write(self.style.SUCCESS(f'✓ Min ratings per user: {min_ratings}'))
-        self.stdout.write(self.style.SUCCESS(f'✓ Max ratings per user: {max_ratings}'))
-        
-        product_groups = self.get_product_groups(product_map)
+        # Assign user groups
         user_groups = self.assign_user_groups(users)
         
-        self.stdout.write(self.style.SUCCESS('✓ Assigned user groups'))
+        # Display group distribution
         self.stdout.write('')
+        self.stdout.write(self.style.SUCCESS('--- User Group Distribution ---'))
+        for gid in sorted(self.USER_GROUPS.keys()):
+            count = sum(1 for g in user_groups.values() if g == gid)
+            pct = count / len(users) * 100
+            name = self.USER_GROUPS[gid]['name']
+            self.stdout.write(f'Group {gid} ({name}): {count} users ({pct:.1f}%)')
         
+        # Generate ratings
+        self.stdout.write('')
+        self.stdout.write('Generating ratings...')
+        
+        ratings_batch = []
         total_ratings = 0
         batch_size = 500
-        ratings_batch = []
         
         for idx, user in enumerate(users, 1):
             group_id = user_groups[user.id]
             
-            # Tính số ratings cho user này với một chút randomness
-            # Gaussian distribution với mean=base_ratings, stddev=20% của base_ratings
-            stddev = max(2, int(base_ratings * 0.2))
-            num_ratings = int(random.gauss(base_ratings, stddev))
+            # Select products based on preferences
+            products_to_rate = self.select_products_for_user(group_id, product_map)
             
-            # Đảm bảo trong khoảng hợp lệ
-            num_ratings = max(min_ratings, min(num_ratings, max_ratings))
-            
-            rated_products = set()
-            attempts = 0
-            max_attempts = num_ratings * 3
-            
-            while len(rated_products) < num_ratings and attempts < max_attempts:
-                attempts += 1
-                product_id = self.sample_product_for_group(group_id, product_groups)
+            for product_id in products_to_rate:
+                product_info = product_map[product_id]
+                score = self.generate_rating_for_product(group_id, product_info)
                 
-                if product_id not in rated_products:
-                    rated_products.add(product_id)
-                    product = product_map[product_id]
-                    score = self.sample_rating(group_id, product_id, product_map)
-                    
-                    rating = Rating(
-                        user=user,
-                        product=product,
-                        score=score,
-                        rating_type=Rating.EXPLICIT,
-                        confidence=1.0,
-                        source='synthetic_data'
+                rating = Rating(
+                    user=user,
+                    product=product_info['product'],
+                    score=score,
+                    rating_type=Rating.EXPLICIT,
+                    confidence=1.0,
+                    source='synthetic_data'
+                )
+                
+                ratings_batch.append(rating)
+                total_ratings += 1
+                
+                if len(ratings_batch) >= batch_size:
+                    Rating.objects.bulk_create(ratings_batch, ignore_conflicts=True)
+                    self.stdout.write(
+                        f'  → {idx}/{len(users)} users | {total_ratings:,} ratings...', 
+                        ending='\r'
                     )
-                    
-                    ratings_batch.append(rating)
-                    total_ratings += 1
-                    
-                    if len(ratings_batch) >= batch_size:
-                        Rating.objects.bulk_create(ratings_batch, ignore_conflicts=True)
-                        self.stdout.write(
-                            f'  → Processing: {idx}/{len(users)} users | Created {total_ratings:,} ratings...', 
-                            ending='\r'
-                        )
-                        self.stdout.flush()
-                        ratings_batch = []
+                    self.stdout.flush()
+                    ratings_batch = []
         
         if ratings_batch:
             Rating.objects.bulk_create(ratings_batch, ignore_conflicts=True)
         
+        # Summary
         self.stdout.write('')
         self.stdout.write('')
-        self.stdout.write(self.style.SUCCESS(f'✓ Created {total_ratings:,} explicit ratings'))
-        self.stdout.write(self.style.SUCCESS(f'✓ Average ratings per user: {total_ratings / len(users):.1f}'))
-        self.stdout.write(self.style.SUCCESS(f'✓ Coverage: {(total_ratings / len(users)) / total_products * 100:.1f}% of products per user'))
+        self.stdout.write(self.style.SUCCESS('='*70))
+        self.stdout.write(self.style.SUCCESS('✓ COMPLETED'))
+        self.stdout.write(self.style.SUCCESS('='*70))
+        self.stdout.write(f'Total products: {len(product_map)}')
+        self.stdout.write(f'Total ratings: {total_ratings:,}')
+        self.stdout.write(f'Average per user: {total_ratings / len(users):.1f}')
         
-        self.stdout.write('')
-        self.stdout.write(self.style.SUCCESS('--- User Group Distribution ---'))
-        group_counts = {}
-        for gid in range(1, 11):
-            count = sum(1 for g in user_groups.values() if g == gid)
-            group_counts[gid] = count
-            self.stdout.write(f'Group {gid}: {count} users ({count/len(users)*100:.1f}%)')
+        self.validate_ratings()
 
     def validate_ratings(self):
-        """Validate ratings in database"""
+        """Validation và statistics"""
         self.stdout.write('')
-        self.stdout.write(self.style.SUCCESS('=== Rating Validation ==='))
-        
-        total_ratings = Rating.objects.filter(rating_type=Rating.EXPLICIT).count()
-        total_users = Rating.objects.filter(rating_type=Rating.EXPLICIT).values('user').distinct().count()
-        total_products = Rating.objects.filter(rating_type=Rating.EXPLICIT).values('product').distinct().count()
-        
-        self.stdout.write(f'Total explicit ratings: {total_ratings:,}')
-        self.stdout.write(f'Users with ratings: {total_users:,}')
-        self.stdout.write(f'Products rated: {total_products:,}')
-        
-        if total_users > 0:
-            avg_per_user = total_ratings / total_users
-            self.stdout.write(f'Average ratings per user: {avg_per_user:.1f}')
+        self.stdout.write(self.style.SUCCESS('--- Rating Statistics ---'))
         
         from django.db.models import Count
-        rating_dist = Rating.objects.filter(
+        
+        total = Rating.objects.filter(rating_type=Rating.EXPLICIT).count()
+        distribution = Rating.objects.filter(
             rating_type=Rating.EXPLICIT
         ).values('score').annotate(count=Count('id')).order_by('score')
         
-        self.stdout.write('')
-        self.stdout.write(self.style.SUCCESS('--- Rating Distribution ---'))
-        for item in rating_dist:
-            self.stdout.write(f'Score {item["score"]}: {item["count"]:,} ratings')
+        for item in distribution:
+            count = item['count']
+            score = item['score']
+            pct = (count / total * 100) if total > 0 else 0
+            self.stdout.write(f'{score} stars: {count:>6,} ({pct:>5.1f}%)')
+        
+        self.stdout.write(self.style.SUCCESS('='*70))
