@@ -1,15 +1,14 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="vi">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quản lý sản phẩm - Admin</title>
-  <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
-  <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
-  <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
-  <style>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý sản phẩm - Admin</title>
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
+    <style>
     /* Modern styling */
     .stats-cards {
       display: grid;
@@ -34,14 +33,6 @@
 
     .stat-card.success {
       background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    }
-
-    .stat-card.warning {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .stat-card.info {
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     }
 
     .stat-card .stat-icon {
@@ -75,22 +66,87 @@
 
     .search-box input {
       padding-left: 45px;
+      padding-right: 50px;
       border-radius: 25px;
       border: 2px solid #e0e0e0;
       transition: all 0.3s;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .search-box input::placeholder {
+      color: #bbb;
+      font-weight: 400;
     }
 
     .search-box input:focus {
       border-color: #667eea;
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      outline: none;
     }
 
-    .search-box i {
+    .search-box i.fa-search {
       position: absolute;
       left: 18px;
       top: 50%;
       transform: translateY(-50%);
       color: #999;
+      pointer-events: none;
+      font-size: 1.1rem;
+    }
+
+    .search-loading {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: none;
+      color: #667eea;
+      font-size: 1.2rem;
+      pointer-events: none;
+    }
+
+    .search-loading.active {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from {
+        transform: translateY(-50%) rotate(0deg);
+      }
+      to {
+        transform: translateY(-50%) rotate(360deg);
+      }
+    }
+
+    .search-clear-btn {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      display: none;
+      padding: 5px 8px;
+      font-size: 1.2rem;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .search-clear-btn:hover {
+      color: #667eea;
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .search-clear-btn:active {
+      transform: translateY(-50%) scale(0.95);
+    }
+
+    .search-clear-btn.active {
+      display: inline-block;
     }
 
     .product-table-container {
@@ -298,371 +354,349 @@
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       padding: 15px 20px;
     }
-
-    .filter-tags {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 15px;
-    }
-
-    .filter-tag {
-      background: #e3f2fd;
-      color: #1976d2;
-      padding: 8px 15px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .filter-tag:hover {
-      background: #1976d2;
-      color: white;
-    }
-
-    .filter-tag i {
-      font-size: 0.7rem;
-    }
-  </style>
-</head>
-
-<body>
-  <div class="container-fluid">
-    <div class="row">
-      <!-- Sidebar -->
-      <div class="col-md-2 sidebar">
-        <div class="text-white ps-3 mb-4" style="border-bottom: 1px solid rgba(255,255,255,0.2);
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 sidebar">
+          <div class="text-white ps-3 mb-4"
+               style="border-bottom: 1px solid rgba(255,255,255,0.2);
                       padding: 20px 0;
                       text-align: center">
-          <h4 class="m-0">
-            <i class="fas fa-cog"></i> ADMIN
-          </h4>
-        </div>
-        <a href="{% url 'product_list' %}" class="active">
-          <i class="fas fa-box"></i> Danh sách sản phẩm
-        </a>
-        <a href="{% url 'product_create' %}">
-          <i class="fas fa-plus"></i> Thêm sản phẩm
-        </a>
-        <a href="#">
-          <i class="fas fa-tags"></i> Danh mục
-        </a>
-        <a href="#">
-          <i class="fas fa-user"></i> Khách hàng
-        </a>
-        <a href="{% url 'orders_list' %}">
-          <i class="fas fa-chart-bar"></i> Đơn hàng
-        </a>
-      </div>
-
-      <!-- Main Content -->
-      <div class="col-md-10 main-content">
-        <!-- Messages -->
-        {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-custom alert-dismissible fade show" role="alert">
-          <i class="fas fa-check-circle"></i> {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
-
-        <!-- Page Header -->
-        <div class="page-header-modern">
-          <div>
-            <h1>
-              <i class="fas fa-box-open"></i> Quản lý sản phẩm
-            </h1>
-            <p class="text-muted mb-0">Quản lý và theo dõi tất cả sản phẩm trong hệ thống</p>
+            <h4 class="m-0">
+              <i class="fas fa-cog"></i> ADMIN
+            </h4>
           </div>
-          <a href="{% url 'product_create' %}" class="add-product-btn">
-            <i class="fas fa-plus-circle"></i> Thêm sản phẩm mới
+          <a href="{% url 'product_list' %}" class="active">
+            <i class="fas fa-box"></i> Danh sách sản phẩm
+          </a>
+          <a href="{% url 'product_create' %}">
+            <i class="fas fa-plus"></i> Thêm sản phẩm
+          </a>
+          <a href="#">
+            <i class="fas fa-tags"></i> Danh mục
+          </a>
+          <a href="#">
+            <i class="fas fa-user"></i> Khách hàng
+          </a>
+          <a href="{% url 'orders_list' %}">
+            <i class="fas fa-chart-bar"></i> Đơn hàng
+          </a>
+          <a href="{% url 'returns_list' %}">
+            <i class="fas fa-undo"></i> Trả hàng
           </a>
         </div>
-
-        <!-- Stats Cards -->
-        <div class="stats-cards">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-boxes"></i>
-            </div>
-            <div class="stat-value">{{ page_obj.paginator.count }}</div>
-            <div class="stat-label">Tổng sản phẩm</div>
-          </div>
-
-          <div class="stat-card success">
-            <div class="stat-icon">
-              <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="stat-value">{{ page_obj.paginator.count }}</div>
-            <div class="stat-label">Đang hoạt động</div>
-          </div>
-
-          <div class="stat-card warning">
-            <div class="stat-icon">
-              <i class="fas fa-fire"></i>
-            </div>
-            <div class="stat-value">-</div>
-            <div class="stat-label">Bán chạy</div>
-          </div>
-
-          <div class="stat-card info">
-            <div class="stat-icon">
-              <i class="fas fa-tags"></i>
-            </div>
-            <div class="stat-value">-</div>
-            <div class="stat-label">Danh mục</div>
-          </div>
-        </div>
-
-        <!-- Search & Filter -->
-        <div class="search-filter-section">
-          <div class="row align-items-center">
-            <div class="col-md-8">
-              <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" class="form-control form-control-lg" placeholder="Tìm kiếm sản phẩm theo tên, ID...">
+        <!-- Main Content -->
+        <div class="col-md-10 main-content">
+          <!-- Messages -->
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-custom alert-dismissible fade show"
+                   role="alert">
+                <i class="fas fa-check-circle"></i> {{ message }}
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"
+                        aria-label="Close"></button>
               </div>
+            {% endfor %}
+          {% endif %}
+          <!-- Page Header -->
+          <div class="page-header-modern">
+            <div>
+              <h1>
+                <i class="fas fa-box-open"></i> Quản lý sản phẩm
+              </h1>
+              <p class="text-muted mb-0">Quản lý và theo dõi tất cả sản phẩm trong hệ thống</p>
             </div>
-            <div class="col-md-4">
-              <select class="form-select form-select-lg">
-                <option selected>Tất cả danh mục</option>
-                <option>Điện thoại</option>
-                <option>Laptop</option>
-                <option>Tablet</option>
-              </select>
+            <a href="{% url 'product_create' %}" class="add-product-btn">
+              <i class="fas fa-plus-circle"></i> Thêm sản phẩm mới
+            </a>
+          </div>
+          <!-- Stats Cards -->
+          <div class="stats-cards">
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-boxes"></i>
+              </div>
+              <div class="stat-value">{{ page_obj.paginator.count }}</div>
+              <div class="stat-label">Tổng sản phẩm</div>
+            </div>
+            <div class="stat-card success">
+              <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+              </div>
+              <div class="stat-value">{{ page_obj.paginator.count }}</div>
+              <div class="stat-label">Đang hoạt động</div>
             </div>
           </div>
-
-          <!-- Filter Tags -->
-          <div class="filter-tags">
-            <div class="filter-tag">
-              <i class="fas fa-fire"></i> Sản phẩm HOT
+          <!-- Search & Filter -->
+          <div class="search-filter-section">
+            <!-- Search Form -->
+            <form method="get" id="searchForm" class="row align-items-center">
+              <div class="col-md-8">
+                <div class="search-box position-relative">
+                  <i class="fas fa-search"></i>
+                  <input type="text"
+                         name="search"
+                         id="searchInput"
+                         class="form-control form-control-lg"
+                         placeholder="Tìm kiếm sản phẩm theo tên, ID..."
+                         value="{{ search_query }}"
+                         autocomplete="off"
+                         spellcheck="false">
+                  <button type="button"
+                          class="search-clear-btn"
+                          id="searchClearBtn"
+                          onclick="clearSearchInput()"
+                          {% if not search_query %}style="display: none;"{% endif %}
+                          title="Xóa tìm kiếm">
+                    <i class="fas fa-times-circle"></i>
+                  </button>
+                  <div class="search-loading" id="searchLoading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <!-- Product Table -->
+          <div class="product-table-container">
+            <div class="table-header-custom">
+              <h5>
+                <i class="fas fa-list-ul"></i> Danh sách sản phẩm
+              </h5>
             </div>
-            <div class="filter-tag">
-              <i class="fas fa-bolt"></i> Flash Sale
-            </div>
-            <div class="filter-tag">
-              <i class="fas fa-trophy"></i> Bán chạy
-            </div>
-            <div class="filter-tag">
-              <i class="fas fa-box"></i> Còn hàng
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th style="width: 8%">ID</th>
+                    <th style="width: 37%">Tên sản phẩm</th>
+                    <th style="width: 15%">Giá bán</th>
+                    <th style="width: 15%">Danh mục</th>
+                    <th style="width: 25%" class="text-center">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for p in page_obj %}
+                    <tr>
+                      <td>
+                        <span class="product-id">{{ p.id }}</span>
+                      </td>
+                      <td>
+                        <div class="product-name">{{ p.name }}</div>
+                        <small class="text-muted">SKU: PRD-{{ p.id|stringformat:"04d" }}</small>
+                      </td>
+                      <td>
+                        <span class="price-badge">{{ p.price|floatformat:0 }}₫</span>
+                        {% if p.discount_price %}
+                          <div>
+                            <small class="text-muted text-decoration-line-through">{{ p.discount_price|floatformat:0 }}₫</small>
+                          </div>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <span class="category-badge">
+                          <i class="fas fa-tag"></i> {{ p.category }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="action-buttons justify-content-center">
+                          <a href="{% url 'product_detail' p.id %}"
+                             class="btn btn-sm btn-detail"
+                             title="Xem chi tiết">
+                            <i class="fas fa-eye"></i> Xem
+                          </a>
+                          <a href="{% url 'product_update' p.id %}"
+                             class="btn btn-sm btn-edit"
+                             title="Chỉnh sửa">
+                            <i class="fas fa-edit"></i> Sửa
+                          </a>
+                          <form action="{% url 'product_delete' p.id %}"
+                                method="POST"
+                                style="display: inline"
+                                onsubmit="return confirm('⚠️ Bạn có chắc chắn muốn xóa sản phẩm này?\n\nHành động này không thể hoàn tác!');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-delete" title="Xóa sản phẩm">
+                              <i class="fas fa-trash-alt"></i> Xóa
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="5">
+                        <div class="empty-state">
+                          <i class="fas fa-box-open"></i>
+                          <h4>
+                            {% if search_query %}
+                              Không tìm thấy sản phẩm
+                            {% else %}
+                              Chưa có sản phẩm nào
+                            {% endif %}
+                          </h4>
+                          <p class="text-muted">
+                            {% if search_query %}
+                              Thử tìm kiếm với từ khóa khác
+                            {% else %}
+                              Hãy thêm sản phẩm đầu tiên của bạn
+                            {% endif %}
+                          </p>
+                          {% if not search_query %}
+                            <a href="{% url 'product_create' %}" class="add-product-btn mt-3">
+                              <i class="fas fa-plus-circle"></i> Thêm sản phẩm ngay
+                            </a>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-
-        <!-- Info Text -->
-        <div class="mb-3 d-flex justify-content-between align-items-center">
-          <small class="text-muted">
-            Hiển thị <strong>{{ page_obj.start_index }}</strong> - <strong>{{ page_obj.end_index }}</strong>
-            trong tổng số <strong>{{ page_obj.paginator.count }}</strong> sản phẩm
-          </small>
-          <div class="btn-group" role="group">
-            <button type="button" class="btn btn-sm btn-outline-secondary active">
-              <i class="fas fa-th-list"></i>
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary">
-              <i class="fas fa-th"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Product Table -->
-        <div class="product-table-container">
-          <div class="table-header-custom">
-            <h5>
-              <i class="fas fa-list-ul"></i> Danh sách sản phẩm
-            </h5>
-          </div>
-
-          <div class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead>
-                <tr>
-                  <th style="width: 8%">
-                    <input type="checkbox" class="form-check-input"> ID
-                  </th>
-                  <th style="width: 37%">Tên sản phẩm</th>
-                  <th style="width: 15%">Giá bán</th>
-                  <th style="width: 15%">Danh mục</th>
-                  <th style="width: 25%" class="text-center">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for p in page_obj %}
-                <tr>
-                  <td>
-                    <input type="checkbox" class="form-check-input me-2">
-                    <span class="product-id">#{{ p.id }}</span>
-                  </td>
-                  <td>
-                    <div class="product-name">{{ p.name }}</div>
-                    <small class="text-muted">SKU: PRD-{{ p.id|stringformat:"04d" }}</small>
-                  </td>
-                  <td>
-                    <span class="price-badge">{{ p.price|floatformat:0 }}₫</span>
-                    {% if p.discount_price %}
-                    <div>
-                      <small class="text-muted text-decoration-line-through">
-                        {{ p.discount_price|floatformat:0 }}₫
-                      </small>
-                    </div>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <span class="category-badge">
-                      <i class="fas fa-tag"></i> {{ p.category }}
+          <!-- Pagination -->
+          {% if is_paginated %}
+            <nav aria-label="Page navigation">
+              <ul class="pagination justify-content-center">
+                <!-- First Page & Previous -->
+                {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">
+                      <i class="fas fa-angle-double-left"></i>
+                    </a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                      <i class="fas fa-angle-left"></i>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-angle-double-left"></i>
                     </span>
-                  </td>
-                  <td>
-                    <div class="action-buttons justify-content-center">
-                      <a href="{% url 'product_detail' p.id %}" class="btn btn-sm btn-detail" title="Xem chi tiết">
-                        <i class="fas fa-eye"></i> Xem
-                      </a>
-                      <a href="{% url 'product_update' p.id %}" class="btn btn-sm btn-edit" title="Chỉnh sửa">
-                        <i class="fas fa-edit"></i> Sửa
-                      </a>
-                      <form action="{% url 'product_delete' p.id %}" method="POST" style="display: inline;"
-                        onsubmit="return confirm('⚠️ Bạn có chắc chắn muốn xóa sản phẩm này?\n\nHành động này không thể hoàn tác!');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-delete" title="Xóa sản phẩm">
-                          <i class="fas fa-trash-alt"></i> Xóa
-                        </button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="5">
-                    <div class="empty-state">
-                      <i class="fas fa-box-open"></i>
-                      <h4>Chưa có sản phẩm nào</h4>
-                      <p class="text-muted">Hãy thêm sản phẩm đầu tiên của bạn</p>
-                      <a href="{% url 'product_create' %}" class="add-product-btn mt-3">
-                        <i class="fas fa-plus-circle"></i> Thêm sản phẩm ngay
-                      </a>
-                    </div>
-                  </td>
-                </tr>
+                  </li>
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-angle-left"></i>
+                    </span>
+                  </li>
+                {% endif %}
+                <!-- Page Numbers -->
+                {% for num in page_obj.paginator.page_range %}
+                  {% if page_obj.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link"
+                         href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                    </li>
+                  {% endif %}
                 {% endfor %}
-              </tbody>
-            </table>
-          </div>
+                <!-- Next & Last Page -->
+                {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                      <i class="fas fa-angle-right"></i>
+                    </a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                      <i class="fas fa-angle-double-right"></i>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-angle-right"></i>
+                    </span>
+                  </li>
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-angle-double-right"></i>
+                    </span>
+                  </li>
+                {% endif %}
+              </ul>
+              <!-- Page Info -->
+              <div class="text-center mt-3">
+                <small class="text-muted">
+                  Trang <strong>{{ page_obj.number }}</strong> / <strong>{{ page_obj.paginator.num_pages }}</strong>
+                </small>
+              </div>
+            </nav>
+          {% endif %}
         </div>
-
-        <!-- Pagination -->
-        {% if is_paginated %}
-        <nav aria-label="Page navigation">
-          <ul class="pagination justify-content-center">
-            <!-- First Page -->
-            {% if page_obj.has_previous %}
-            <li class="page-item">
-              <a class="page-link" href="?page=1">
-                <i class="fas fa-angle-double-left"></i>
-              </a>
-            </li>
-            <li class="page-item">
-              <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
-                <i class="fas fa-angle-left"></i>
-              </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled">
-              <span class="page-link">
-                <i class="fas fa-angle-double-left"></i>
-              </span>
-            </li>
-            <li class="page-item disabled">
-              <span class="page-link">
-                <i class="fas fa-angle-left"></i>
-              </span>
-            </li>
-            {% endif %}
-
-            <!-- Page Numbers -->
-            {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-            <li class="page-item active">
-              <span class="page-link">{{ num }}</span>
-            </li>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <li class="page-item">
-              <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-              </li>
-              {% endif %}
-              {% endfor %}
-
-              <!-- Last Page -->
-              {% if page_obj.has_next %}
-              <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
-                  <i class="fas fa-angle-right"></i>
-                </a>
-              </li>
-              <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
-                  <i class="fas fa-angle-double-right"></i>
-                </a>
-              </li>
-              {% else %}
-              <li class="page-item disabled">
-                <span class="page-link">
-                  <i class="fas fa-angle-right"></i>
-                </span>
-              </li>
-              <li class="page-item disabled">
-                <span class="page-link">
-                  <i class="fas fa-angle-double-right"></i>
-                </span>
-              </li>
-              {% endif %}
-          </ul>
-
-          <!-- Page Info -->
-          <div class="text-center mt-3">
-            <small class="text-muted">
-              Trang <strong>{{ page_obj.number }}</strong> / <strong>{{ page_obj.paginator.num_pages }}</strong>
-            </small>
-          </div>
-        </nav>
-        {% endif %}
       </div>
     </div>
-  </div>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script>
+      const searchInput = document.getElementById('searchInput');
+      const searchForm = document.getElementById('searchForm');
+      const searchClearBtn = document.getElementById('searchClearBtn');
+      const searchLoading = document.getElementById('searchLoading');
+      let searchTimeout;
 
-  <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-  <script>
-    // Search functionality (placeholder)
-    document.querySelector('.search-box input').addEventListener('input', function (e) {
-      const searchTerm = e.target.value.toLowerCase();
-      // TODO: Implement search logic or AJAX call
-      console.log('Searching for:', searchTerm);
-    });
-
-    // Filter tags interaction
-    document.querySelectorAll('.filter-tag').forEach(tag => {
-      tag.addEventListener('click', function () {
-        this.classList.toggle('active');
-        // TODO: Implement filter logic
+      // Hiển thị/ẩn nút xóa tìm kiếm
+      searchInput.addEventListener('input', function() {
+        if (this.value.trim()) {
+          searchClearBtn.style.display = 'block';
+        } else {
+          searchClearBtn.style.display = 'none';
+        }
       });
-    });
 
-    // Select all checkbox
-    const selectAllCheckbox = document.querySelector('thead input[type="checkbox"]');
-    const rowCheckboxes = document.querySelectorAll('tbody input[type="checkbox"]');
+      // Xóa input tìm kiếm
+      function clearSearchInput() {
+        searchInput.value = '';
+        searchClearBtn.style.display = 'none';
+        searchInput.focus();
+        searchForm.submit();
+      }
 
-    if (selectAllCheckbox) {
-      selectAllCheckbox.addEventListener('change', function () {
-        rowCheckboxes.forEach(checkbox => {
-          checkbox.checked = this.checked;
-        });
+      // Auto-submit form khi gõ từng ký tự
+      searchInput.addEventListener('input', function(e) {
+        const value = this.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        // Nếu rỗng, xóa ngay
+        if (value.length === 0) {
+          searchForm.submit();
+          return;
+        }
+        
+        // Debounce 300ms
+        searchLoading.classList.add('active');
+        searchTimeout = setTimeout(() => {
+          searchForm.submit();
+        }, 300);
       });
-    }
-  </script>
-</body>
 
+      // Submit form khi nhấn Enter
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          clearTimeout(searchTimeout);
+          searchLoading.classList.add('active');
+          searchForm.submit();
+        }
+      });
+
+      // Ẩn loading indicator khi trang load xong
+      window.addEventListener('load', function() {
+        searchLoading.classList.remove('active');
+      });
+    </script>
+  </body>
 </html>

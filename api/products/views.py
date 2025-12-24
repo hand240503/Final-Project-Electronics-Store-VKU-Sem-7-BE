@@ -9,29 +9,51 @@ from .forms import ProductForm
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .serializers import ProductSearchSerializer
+from django.db.models import Q
 
 import requests
 import cloudinary.uploader  # ← THÊM IMPORT NÀY
 
 @require_http_methods(["GET"])
 def product_list(request):
-    products = Product.objects.all().order_by('id')
+    """
+    GET /admin/products/
+    Hiển thị danh sách sản phẩm với phân trang và tìm kiếm
+    """
+    # Lấy từ khóa tìm kiếm từ query params
+    search_query = request.GET.get('search', '').strip()
     
-    paginator = Paginator(products, 10) 
+    # Lấy tất cả sản phẩm
+    products = Product.objects.all().order_by('-created_at')
+    
+    # Áp dụng tìm kiếm nếu có
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    # Phân trang - 10 sản phẩm trên mỗi trang
+    paginator = Paginator(products, 10)
     page = request.GET.get('page')
     
     try:
-        products = paginator.page(page)
+        page_obj = paginator.page(page)
     except PageNotAnInteger:
-        products = paginator.page(1)
+        # Nếu page không phải số, lấy trang 1
+        page_obj = paginator.page(1)
     except EmptyPage:
-        products = paginator.page(paginator.num_pages)
+        # Nếu page vượt quá số trang, lấy trang cuối cùng
+        page_obj = paginator.page(paginator.num_pages)
     
-    return render(request, "product_list.html", {
-        "products": products,
-        "page_obj": products,
-        "is_paginated": paginator.num_pages > 1
-    })
+    context = {
+        'page_obj': page_obj,
+        'products': page_obj.object_list,  # Danh sách sản phẩm của trang hiện tại
+        'search_query': search_query,
+        'is_paginated': paginator.num_pages > 1,
+    }
+    
+    return render(request, "product_list.html", context)
 
 @require_http_methods(["GET", "POST"])
 def product_create(request):
@@ -214,6 +236,7 @@ def product_delete(request, pk):
 
     product.delete()
     return redirect("product_list")
+
 
 
 # ==========================

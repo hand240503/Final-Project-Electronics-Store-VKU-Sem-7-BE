@@ -1,15 +1,14 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="vi">
-
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cập nhật sản phẩm - Admin</title>
-    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
-    <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
-    <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
-    <style>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Cập nhật sản phẩm - Admin</title>
+        <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
+        <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
+        <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
+        <style>
         .error-message {
             color: #dc3545;
             font-size: 0.875rem;
@@ -126,278 +125,289 @@
             border-radius: 6px;
             margin-bottom: 15px;
         }
-    </style>
-</head>
-
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- SIDEBAR -->
-            <div class="col-md-2 sidebar">
-                <div class="text-white ps-3 mb-4" style="border-bottom: 1px solid rgba(255,255,255,0.2);
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row">
+                <!-- SIDEBAR -->
+                <div class="col-md-2 sidebar">
+                    <div class="text-white ps-3 mb-4"
+                         style="border-bottom: 1px solid rgba(255,255,255,0.2);
                                 padding: 20px 0;
                                 text-align: center">
-                    <h4 class="m-0">
-                        <i class="fas fa-cog"></i> ADMIN
-                    </h4>
-                </div>
-                <a href="{% url 'product_list' %}"><i class="fas fa-box"></i> Danh sách sản phẩm</a>
-                <a href="{% url 'product_create' %}"><i class="fas fa-plus"></i> Thêm sản phẩm</a>
-                <a href="#"><i class="fas fa-tags"></i> Danh mục</a>
-                <a href="#"><i class="fas fa-user"></i> Khách hàng</a>
-                <a href="{% url 'orders_list' %}"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
-            </div>
-            <!-- MAIN CONTENT -->
-            <div class="col-md-10 main-content">
-                <div class="row">
-                    <!-- FORM -->
-                    <div class="col-lg-8">
-                        <div class="card shadow-sm form-card">
-                            <div class="card-header form-card-header">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-pen-fancy"></i> Cập nhật sản phẩm: {{ product.name }}
-                                </h5>
-                            </div>
-                            <div class="card-body form-card-body">
-                                <form id="productForm" method="POST" enctype="multipart/form-data" novalidate>
-                                    {% csrf_token %}
-
-                                    <!-- IMAGE SECTION -->
-                                    <div class="form-group mb-4">
-                                        <label class="form-label fw-bold">
-                                            <i class="fas fa-image"></i> Hình ảnh sản phẩm
-                                        </label>
-
-                                        <div class="change-notice" id="changeNotice" style="display: none;">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                            <strong>Lưu ý:</strong> Upload ảnh mới sẽ thay thế tất cả ảnh hiện tại!
-                                        </div>
-
-                                        <div class="row mb-3">
-                                            <!-- Image 1 -->
-                                            <div class="col-4">
-                                                <div class="preview-container" data-index="0">
-                                                    {% if images.0 %}
-                                                    <span class="current-image-badge">Ảnh hiện tại</span>
-                                                    <img class="preview-image" src="{{ images.0.document.file }}"
-                                                        alt="Current Image 1"
-                                                        data-original="{{ images.0.document.file }}">
-                                                    {% else %}
-                                                    <img class="preview-image" src="{% static 'img/no-image.png' %}"
-                                                        alt="Preview 1" data-original="">
-                                                    {% endif %}
-                                                    <div class="upload-overlay">
-                                                        <i class="fas fa-cloud-upload-alt"></i>
-                                                    </div>
-                                                    <button type="button" class="remove-image">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
-                                                    <div class="loading-spinner">
-                                                        <div class="spinner-border text-primary" role="status">
-                                                            <span class="visually-hidden">Đang tải...</span>
-                                                        </div>
-                                                    </div>
-                                                    <input type="file" name="image_1" class="image-input"
-                                                        accept="image/jpeg,image/png,image/jpg,image/webp">
-                                                </div>
-                                                <div class="image-label">
-                                                    Ảnh chính
-                                                    {% if images.0 and images.0.is_main %}
-                                                    <i class="fas fa-star text-warning"></i>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-
-                                            <!-- Image 2 -->
-                                            <div class="col-4">
-                                                <div class="preview-container" data-index="1">
-                                                    {% if images.1 %}
-                                                    <span class="current-image-badge">Ảnh hiện tại</span>
-                                                    <img class="preview-image" src="{{ images.1.document.file }}"
-                                                        alt="Current Image 2"
-                                                        data-original="{{ images.1.document.file }}">
-                                                    {% else %}
-                                                    <img class="preview-image" src="{% static 'img/no-image.png' %}"
-                                                        alt="Preview 2" data-original="">
-                                                    {% endif %}
-                                                    <div class="upload-overlay">
-                                                        <i class="fas fa-cloud-upload-alt"></i>
-                                                    </div>
-                                                    <button type="button" class="remove-image">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
-                                                    <div class="loading-spinner">
-                                                        <div class="spinner-border text-primary" role="status">
-                                                            <span class="visually-hidden">Đang tải...</span>
-                                                        </div>
-                                                    </div>
-                                                    <input type="file" name="image_2" class="image-input"
-                                                        accept="image/jpeg,image/png,image/jpg,image/webp">
-                                                </div>
-                                                <div class="image-label">Ảnh phụ 1</div>
-                                            </div>
-
-                                            <!-- Image 3 -->
-                                            <div class="col-4">
-                                                <div class="preview-container" data-index="2">
-                                                    {% if images.2 %}
-                                                    <span class="current-image-badge">Ảnh hiện tại</span>
-                                                    <img class="preview-image" src="{{ images.2.document.file }}"
-                                                        alt="Current Image 3"
-                                                        data-original="{{ images.2.document.file }}">
-                                                    {% else %}
-                                                    <img class="preview-image" src="{% static 'img/no-image.png' %}"
-                                                        alt="Preview 3" data-original="">
-                                                    {% endif %}
-                                                    <div class="upload-overlay">
-                                                        <i class="fas fa-cloud-upload-alt"></i>
-                                                    </div>
-                                                    <button type="button" class="remove-image">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
-                                                    <div class="loading-spinner">
-                                                        <div class="spinner-border text-primary" role="status">
-                                                            <span class="visually-hidden">Đang tải...</span>
-                                                        </div>
-                                                    </div>
-                                                    <input type="file" name="image_3" class="image-input"
-                                                        accept="image/jpeg,image/png,image/jpg,image/webp">
-                                                </div>
-                                                <div class="image-label">Ảnh phụ 2</div>
-                                            </div>
-                                        </div>
-                                        <small class="text-muted">
-                                            <i class="fas fa-info-circle"></i>
-                                            Click vào ảnh để thay đổi. Để trống nếu không muốn thay đổi.
-                                            Chấp nhận: JPG, PNG, WEBP. Tối đa 5MB/ảnh
-                                        </small>
-                                    </div>
-
-                                    <!-- NAME -->
-                                    <div class="form-group mb-3">
-                                        <label class="form-label fw-bold">
-                                            <i class="fas fa-heading"></i> Tên sản phẩm <span
-                                                class="text-danger">*</span>
-                                        </label>
-                                        {{ form.name }}
-                                    </div>
-
-                                    <!-- DESCRIPTION -->
-                                    <div class="form-group mb-3">
-                                        <label class="form-label fw-bold">
-                                            <i class="fas fa-align-left"></i> Mô tả
-                                        </label>
-                                        {{ form.description }}
-                                    </div>
-
-                                    <!-- PRICE -->
-                                    <div class="form-group mb-3">
-                                        <label class="form-label fw-bold">
-                                            <i class="fas fa-dollar-sign"></i> Giá <span class="text-danger">*</span>
-                                        </label>
-                                        {{ form.price }}
-                                    </div>
-
-                                    <!-- DISCOUNT -->
-                                    <div class="form-group mb-4">
-                                        <label class="form-label fw-bold">
-                                            <i class="fas fa-percentage"></i> Giá giảm (nếu có)
-                                        </label>
-                                        {{ form.discount_price }}
-                                    </div>
-
-                                    <!-- BRAND -->
-                                    <div class="form-group mb-3">
-                                        <label class="form-label fw-bold">
-                                            <i class="fas fa-industry"></i> Thương hiệu <span
-                                                class="text-danger">*</span>
-                                        </label>
-                                        {{ form.brand }}
-                                        {% if form.brand.errors %}
-                                        <div class="error-message">
-                                            <i class="fas fa-times-circle"></i> {{ form.brand.errors }}
-                                        </div>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- CATEGORY -->
-                                    <div class="form-group mb-3">
-                                        <label class="form-label fw-bold">
-                                            <i class="fas fa-tags"></i> Danh mục <span class="text-danger">*</span>
-                                        </label>
-                                        {{ form.category }}
-                                        {% if form.category.errors %}
-                                        <div class="error-message">
-                                            <i class="fas fa-times-circle"></i> {{ form.category.errors }}
-                                        </div>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- BUTTONS -->
-                                    <div class="btn-group-form mt-4">
-                                        <button type="submit" class="btn-submit">
-                                            <i class="fas fa-save"></i> Lưu thay đổi
-                                        </button>
-                                        <a href="{% url 'product_list' %}" class="btn-cancel"
-                                            style="text-decoration: none">
-                                            <i class="fas fa-arrow-left"></i> Quay lại
-                                        </a>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
+                        <h4 class="m-0">
+                            <i class="fas fa-cog"></i> ADMIN
+                        </h4>
                     </div>
-
-                    <!-- INFO CARD -->
-                    <div class="col-lg-4">
-                        <div class="card shadow-sm info-card mb-3">
-                            <div class="card-header info-card-header">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-info-circle"></i> Hướng dẫn
-                                </h6>
-                            </div>
-                            <div class="card-body info-card-body">
-                                <p class="small mb-2">
-                                    <strong>Giữ nguyên ảnh:</strong> Không upload ảnh mới
-                                </p>
-                                <p class="small mb-2">
-                                    <strong>Thay đổi ảnh:</strong> Click vào ảnh và chọn file mới
-                                </p>
-                                <p class="small mb-2">
-                                    <strong>Xóa ảnh:</strong> Click nút X ở góc trên bên phải
-                                </p>
-                                <hr>
-                                <p class="small text-muted mb-0">
-                                    <i class="fas fa-check-circle text-success"></i> Hỗ trợ: JPG, PNG, WEBP<br>
-                                    <i class="fas fa-check-circle text-success"></i> Tối đa: 5MB/ảnh<br>
-                                    <i class="fas fa-check-circle text-success"></i> Tối đa 3 ảnh/sản phẩm
-                                </p>
+                    <a href="{% url 'product_list' %}"><i class="fas fa-box"></i> Danh sách sản phẩm</a>
+                    <a href="{% url 'product_create' %}"><i class="fas fa-plus"></i> Thêm sản phẩm</a>
+                    <a href="#"><i class="fas fa-tags"></i> Danh mục</a>
+                    <a href="#"><i class="fas fa-user"></i> Khách hàng</a>
+                    <a href="{% url 'orders_list' %}"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
+                    <a href="{% url 'returns_list' %}" class="active">
+                        <i class="fas fa-undo"></i> Trả hàng
+                    </a>
+                </div>
+                <!-- MAIN CONTENT -->
+                <div class="col-md-10 main-content">
+                    <div class="row">
+                        <!-- FORM -->
+                        <div class="col-lg-8">
+                            <div class="card shadow-sm form-card">
+                                <div class="card-header form-card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-pen-fancy"></i> Cập nhật sản phẩm: {{ product.name }}
+                                    </h5>
+                                </div>
+                                <div class="card-body form-card-body">
+                                    <form id="productForm"
+                                          method="POST"
+                                          enctype="multipart/form-data"
+                                          novalidate>
+                                        {% csrf_token %}
+                                        <!-- IMAGE SECTION -->
+                                        <div class="form-group mb-4">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-image"></i> Hình ảnh sản phẩm
+                                            </label>
+                                            <div class="change-notice" id="changeNotice" style="display: none;">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                <strong>Lưu ý:</strong> Upload ảnh mới sẽ thay thế tất cả ảnh hiện tại!
+                                            </div>
+                                            <div class="row mb-3">
+                                                <!-- Image 1 -->
+                                                <div class="col-4">
+                                                    <div class="preview-container" data-index="0">
+                                                        {% if images.0 %}
+                                                            <span class="current-image-badge">Ảnh hiện tại</span>
+                                                            <img class="preview-image"
+                                                                 src="{{ images.0.document.file }}"
+                                                                 alt="Current Image 1"
+                                                                 data-original="{{ images.0.document.file }}">
+                                                        {% else %}
+                                                            <img class="preview-image"
+                                                                 src="{% static 'img/no-image.png' %}"
+                                                                 alt="Preview 1"
+                                                                 data-original="">
+                                                        {% endif %}
+                                                        <div class="upload-overlay">
+                                                            <i class="fas fa-cloud-upload-alt"></i>
+                                                        </div>
+                                                        <button type="button" class="remove-image">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                        <div class="loading-spinner">
+                                                            <div class="spinner-border text-primary" role="status">
+                                                                <span class="visually-hidden">Đang tải...</span>
+                                                            </div>
+                                                        </div>
+                                                        <input type="file"
+                                                               name="image_1"
+                                                               class="image-input"
+                                                               accept="image/jpeg,image/png,image/jpg,image/webp">
+                                                    </div>
+                                                    <div class="image-label">
+                                                        Ảnh chính
+                                                        {% if images.0 and images.0.is_main %}<i class="fas fa-star text-warning"></i>{% endif %}
+                                                    </div>
+                                                </div>
+                                                <!-- Image 2 -->
+                                                <div class="col-4">
+                                                    <div class="preview-container" data-index="1">
+                                                        {% if images.1 %}
+                                                            <span class="current-image-badge">Ảnh hiện tại</span>
+                                                            <img class="preview-image"
+                                                                 src="{{ images.1.document.file }}"
+                                                                 alt="Current Image 2"
+                                                                 data-original="{{ images.1.document.file }}">
+                                                        {% else %}
+                                                            <img class="preview-image"
+                                                                 src="{% static 'img/no-image.png' %}"
+                                                                 alt="Preview 2"
+                                                                 data-original="">
+                                                        {% endif %}
+                                                        <div class="upload-overlay">
+                                                            <i class="fas fa-cloud-upload-alt"></i>
+                                                        </div>
+                                                        <button type="button" class="remove-image">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                        <div class="loading-spinner">
+                                                            <div class="spinner-border text-primary" role="status">
+                                                                <span class="visually-hidden">Đang tải...</span>
+                                                            </div>
+                                                        </div>
+                                                        <input type="file"
+                                                               name="image_2"
+                                                               class="image-input"
+                                                               accept="image/jpeg,image/png,image/jpg,image/webp">
+                                                    </div>
+                                                    <div class="image-label">Ảnh phụ 1</div>
+                                                </div>
+                                                <!-- Image 3 -->
+                                                <div class="col-4">
+                                                    <div class="preview-container" data-index="2">
+                                                        {% if images.2 %}
+                                                            <span class="current-image-badge">Ảnh hiện tại</span>
+                                                            <img class="preview-image"
+                                                                 src="{{ images.2.document.file }}"
+                                                                 alt="Current Image 3"
+                                                                 data-original="{{ images.2.document.file }}">
+                                                        {% else %}
+                                                            <img class="preview-image"
+                                                                 src="{% static 'img/no-image.png' %}"
+                                                                 alt="Preview 3"
+                                                                 data-original="">
+                                                        {% endif %}
+                                                        <div class="upload-overlay">
+                                                            <i class="fas fa-cloud-upload-alt"></i>
+                                                        </div>
+                                                        <button type="button" class="remove-image">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                        <div class="loading-spinner">
+                                                            <div class="spinner-border text-primary" role="status">
+                                                                <span class="visually-hidden">Đang tải...</span>
+                                                            </div>
+                                                        </div>
+                                                        <input type="file"
+                                                               name="image_3"
+                                                               class="image-input"
+                                                               accept="image/jpeg,image/png,image/jpg,image/webp">
+                                                    </div>
+                                                    <div class="image-label">Ảnh phụ 2</div>
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle"></i>
+                                                Click vào ảnh để thay đổi. Để trống nếu không muốn thay đổi.
+                                                Chấp nhận: JPG, PNG, WEBP. Tối đa 5MB/ảnh
+                                            </small>
+                                        </div>
+                                        <!-- NAME -->
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-heading"></i> Tên sản phẩm <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.name }}
+                                        </div>
+                                        <!-- DESCRIPTION -->
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-align-left"></i> Mô tả
+                                            </label>
+                                            {{ form.description }}
+                                        </div>
+                                        <!-- PRICE -->
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-dollar-sign"></i> Giá <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.price }}
+                                        </div>
+                                        <!-- DISCOUNT -->
+                                        <div class="form-group mb-4">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-percentage"></i> Giá giảm (nếu có)
+                                            </label>
+                                            {{ form.discount_price }}
+                                        </div>
+                                        <!-- BRAND -->
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-industry"></i> Thương hiệu <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.brand }}
+                                            {% if form.brand.errors %}
+                                                <div class="error-message">
+                                                    <i class="fas fa-times-circle"></i> {{ form.brand.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <!-- CATEGORY -->
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-tags"></i> Danh mục <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.category }}
+                                            {% if form.category.errors %}
+                                                <div class="error-message">
+                                                    <i class="fas fa-times-circle"></i> {{ form.category.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <!-- BUTTONS -->
+                                        <div class="btn-group-form mt-4">
+                                            <button type="submit" class="btn-submit">
+                                                <i class="fas fa-save"></i> Lưu thay đổi
+                                            </button>
+                                            <a href="{% url 'product_list' %}"
+                                               class="btn-cancel"
+                                               style="text-decoration: none">
+                                                <i class="fas fa-arrow-left"></i> Quay lại
+                                            </a>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Product Info -->
-                        <div class="card shadow-sm info-card">
-                            <div class="card-header info-card-header">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-box"></i> Thông tin sản phẩm
-                                </h6>
+                        <!-- INFO CARD -->
+                        <div class="col-lg-4">
+                            <div class="card shadow-sm info-card mb-3">
+                                <div class="card-header info-card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-info-circle"></i> Hướng dẫn
+                                    </h6>
+                                </div>
+                                <div class="card-body info-card-body">
+                                    <p class="small mb-2">
+                                        <strong>Giữ nguyên ảnh:</strong> Không upload ảnh mới
+                                    </p>
+                                    <p class="small mb-2">
+                                        <strong>Thay đổi ảnh:</strong> Click vào ảnh và chọn file mới
+                                    </p>
+                                    <p class="small mb-2">
+                                        <strong>Xóa ảnh:</strong> Click nút X ở góc trên bên phải
+                                    </p>
+                                    <hr>
+                                    <p class="small text-muted mb-0">
+                                        <i class="fas fa-check-circle text-success"></i> Hỗ trợ: JPG, PNG, WEBP
+                                        <br>
+                                        <i class="fas fa-check-circle text-success"></i> Tối đa: 5MB/ảnh
+                                        <br>
+                                        <i class="fas fa-check-circle text-success"></i> Tối đa 3 ảnh/sản phẩm
+                                    </p>
+                                </div>
                             </div>
-                            <div class="card-body info-card-body">
-                                <p class="small mb-1"><strong>ID:</strong> {{ product.id }}</p>
-                                <p class="small mb-1"><strong>Ngày tạo:</strong> {{ product.created_at|date:"d/m/Y H:i"
-                                    }}</p>
-                                <p class="small mb-0"><strong>Cập nhật:</strong> {{ product.updated_at|date:"d/m/Y H:i"
-                                    }}</p>
+                            <!-- Product Info -->
+                            <div class="card shadow-sm info-card">
+                                <div class="card-header info-card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-box"></i> Thông tin sản phẩm
+                                    </h6>
+                                </div>
+                                <div class="card-body info-card-body">
+                                    <p class="small mb-1">
+                                        <strong>ID:</strong> {{ product.id }}
+                                    </p>
+                                    <p class="small mb-1">
+                                        <strong>Ngày tạo:</strong> {{ product.created_at|date:"d/m/Y H:i"
+                                        }}
+                                    </p>
+                                    <p class="small mb-0">
+                                        <strong>Cập nhật:</strong> {{ product.updated_at|date:"d/m/Y H:i"
+                                        }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-    <script>
+        <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+        <script>
         document.addEventListener('DOMContentLoaded', function () {
             const containers = document.querySelectorAll('.preview-container');
             const changeNotice = document.getElementById('changeNotice');
@@ -524,7 +534,6 @@
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
             });
         });
-    </script>
-</body>
-
+        </script>
+    </body>
 </html>

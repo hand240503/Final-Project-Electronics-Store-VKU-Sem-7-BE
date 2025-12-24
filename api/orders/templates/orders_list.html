@@ -1,15 +1,14 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="vi">
-
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quản lý đơn hàng - Admin</title>
-    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
-    <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
-    <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
-    <style>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Quản lý đơn hàng - Admin</title>
+        <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
+        <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
+        <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
+        <style>
         /* Stats Cards */
         .stats-cards {
             display: grid;
@@ -26,6 +25,7 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             position: relative;
             overflow: hidden;
+            cursor: pointer;
         }
 
         .stat-card::before {
@@ -138,29 +138,72 @@
         }
 
         /* Search Box */
-        .search-box {
-            position: relative;
-        }
+.search-box input {
+    padding-left: 45px;
+    padding-right: 50px;
+    border-radius: 25px;
+    border: 2px solid #e0e0e0;
+    transition: all 0.3s;
+    font-size: 1rem;
+    font-weight: 500;
+}
 
-        .search-box input {
-            padding-left: 45px;
-            border-radius: 25px;
-            border: 2px solid #e0e0e0;
-            transition: all 0.3s;
-        }
+.search-box input::placeholder {
+    color: #bbb;
+    font-weight: 400;
+}
 
-        .search-box input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
+.search-box input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
 
-        .search-box i {
-            position: absolute;
-            left: 18px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #999;
-        }
+.search-box i.fa-search {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    pointer-events: none;
+    font-size: 1.1rem;
+}
+
+.search-loading {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    color: #667eea;
+    font-size: 1.2rem;
+    pointer-events: none;
+}
+
+.search-loading.active {
+    display: inline-block;
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    display: none;
+    padding: 5px 8px;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.search-clear-btn:hover {
+    color: #667eea;
+}
+
 
         /* Table Container */
         .orders-table-container {
@@ -203,6 +246,10 @@
             background-color: #f8f9ff;
             transform: scale(1.005);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .table tbody tr.hidden {
+            display: none;
         }
 
         .table td {
@@ -302,6 +349,7 @@
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
+            justify-content: center;
         }
 
         .btn-view {
@@ -374,6 +422,7 @@
             font-weight: 600;
             transition: all 0.3s;
             box-shadow: 0 5px 15px rgba(250, 112, 154, 0.3);
+            cursor: pointer;
         }
 
         .export-btn:hover {
@@ -389,328 +438,387 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             padding: 15px 20px;
         }
-
-        /* Timeline indicator */
-        .status-timeline {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.7rem;
-            margin-top: 3px;
-            color: #999;
-        }
-
-        .timeline-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #ddd;
-        }
-
-        .timeline-dot.active {
-            background: #11998e;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-2 sidebar">
-                <div class="text-white ps-3 mb-4" style="border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <div class="col-md-2 sidebar">
+                    <div class="text-white ps-3 mb-4"
+                         style="border-bottom: 1px solid rgba(255, 255, 255, 0.2);
                                 padding: 20px 0;
                                 text-align: center">
-                    <h4 class="m-0">
-                        <i class="fas fa-cog"></i> ADMIN
-                    </h4>
+                        <h4 class="m-0">
+                            <i class="fas fa-cog"></i> ADMIN
+                        </h4>
+                    </div>
+                    <a href="{% url 'product_list' %}">
+                        <i class="fas fa-box"></i> Danh sách sản phẩm
+                    </a>
+                    <a href="{% url 'product_create' %}">
+                        <i class="fas fa-plus"></i> Thêm sản phẩm
+                    </a>
+                    <a href="#">
+                        <i class="fas fa-tags"></i> Danh mục
+                    </a>
+                    <a href="#">
+                        <i class="fas fa-user"></i> Khách hàng
+                    </a>
+                    <a href="{% url 'orders_list' %}" class="active">
+                        <i class="fas fa-shopping-cart"></i> Đơn hàng
+                    </a>
+                    <a href="{% url 'returns_list' %}">
+                        <i class="fas fa-undo"></i> Trả hàng
+                    </a>
                 </div>
-                <a href="{% url 'product_list' %}">
-                    <i class="fas fa-box"></i> Danh sách sản phẩm
-                </a>
-                <a href="{% url 'product_create' %}">
-                    <i class="fas fa-plus"></i> Thêm sản phẩm
-                </a>
-                <a href="#">
-                    <i class="fas fa-tags"></i> Danh mục
-                </a>
-                <a href="#">
-                    <i class="fas fa-user"></i> Khách hàng
-                </a>
-                <a href="{% url 'orders_list' %}" class="active">
-                    <i class="fas fa-shopping-cart"></i> Đơn hàng
-                </a>
-            </div>
-
-            <!-- Main Content -->
-            <div class="col-md-10 main-content">
-                <!-- Messages -->
-                {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-custom alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle"></i> {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                {% endfor %}
-                {% endif %}
-
-                <!-- Page Header -->
-                <div class="page-header-modern">
-                    <div>
-                        <h1>
-                            <i class="fas fa-shopping-cart"></i> Quản lý đơn hàng
-                        </h1>
-                        <p class="text-muted mb-0">Theo dõi và xử lý tất cả đơn hàng</p>
+                <!-- Main Content -->
+                <div class="col-md-10 main-content">
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-custom alert-dismissible fade show"
+                                 role="alert">
+                                <i class="fas fa-check-circle"></i> {{ message }}
+                                <button type="button"
+                                        class="btn-close"
+                                        data-bs-dismiss="alert"
+                                        aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <!-- Page Header -->
+                    <div class="page-header-modern">
+                        <div>
+                            <h1>
+                                <i class="fas fa-shopping-cart"></i> Quản lý đơn hàng
+                            </h1>
+                            <p class="text-muted mb-0">Theo dõi và xử lý tất cả đơn hàng</p>
+                        </div>
+                        <button class="export-btn">
+                            <i class="fas fa-file-excel"></i> Xuất Excel
+                        </button>
                     </div>
-                    <button class="export-btn">
-                        <i class="fas fa-file-excel"></i> Xuất Excel
-                    </button>
-                </div>
-
-                <!-- Stats Cards -->
-                <div class="stats-cards">
-                    <div class="stat-card pending">
-                        <div class="stat-icon">
-                            <i class="fas fa-clock"></i>
+                    <!-- Stats Cards -->
+                    <div class="stats-cards">
+                        <div class="stat-card pending" data-status="0">
+                            <div class="stat-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-value" id="count-status-0">0</div>
+                            <div class="stat-label">Chờ xác nhận</div>
                         </div>
-                        <div class="stat-value">
-                            {{ orders|length }}
+                        <div class="stat-card processing" data-status="1">
+                            <div class="stat-icon">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="stat-value" id="count-status-1">0</div>
+                            <div class="stat-label">Chờ lấy hàng</div>
                         </div>
-                        <div class="stat-label">Chờ xác nhận</div>
-                    </div>
-
-                    <div class="stat-card processing">
-                        <div class="stat-icon">
-                            <i class="fas fa-box"></i>
+                        <div class="stat-card shipping" data-status="2">
+                            <div class="stat-icon">
+                                <i class="fas fa-shipping-fast"></i>
+                            </div>
+                            <div class="stat-value" id="count-status-2">0</div>
+                            <div class="stat-label">Đang giao</div>
                         </div>
-                        <div class="stat-value">-</div>
-                        <div class="stat-label">Chờ lấy hàng</div>
-                    </div>
-
-                    <div class="stat-card shipping">
-                        <div class="stat-icon">
-                            <i class="fas fa-shipping-fast"></i>
-                        </div>
-                        <div class="stat-value">-</div>
-                        <div class="stat-label">Đang giao</div>
-                    </div>
-
-                    <div class="stat-card completed">
-                        <div class="stat-icon">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="stat-value">-</div>
-                        <div class="stat-label">Hoàn thành</div>
-                    </div>
-                </div>
-
-                <!-- Filter Section -->
-                <div class="filter-section">
-                    <div class="filter-tabs">
-                        <div class="filter-tab active">
-                            <i class="fas fa-list"></i>
-                            Tất cả
-                            <span class="badge">{{ orders|length }}</span>
-                        </div>
-                        <div class="filter-tab">
-                            <i class="fas fa-clock"></i>
-                            Chờ xác nhận
-                            <span class="badge">-</span>
-                        </div>
-                        <div class="filter-tab">
-                            <i class="fas fa-box"></i>
-                            Chờ lấy hàng
-                            <span class="badge">-</span>
-                        </div>
-                        <div class="filter-tab">
-                            <i class="fas fa-shipping-fast"></i>
-                            Đang giao
-                            <span class="badge">-</span>
-                        </div>
-                        <div class="filter-tab">
-                            <i class="fas fa-check-circle"></i>
-                            Hoàn thành
-                            <span class="badge">-</span>
+                        <div class="stat-card completed" data-status="3">
+                            <div class="stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-value" id="count-status-3">0</div>
+                            <div class="stat-label">Đã giao</div>
                         </div>
                     </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="search-box">
-                                <i class="fas fa-search"></i>
-                                <input type="text" class="form-control form-control-lg"
-                                    placeholder="Tìm kiếm theo mã đơn, tên khách hàng...">
+                    <!-- Filter Section -->
+                    <!-- Filter Section -->
+                    <div class="filter-section">
+                        <div class="filter-tabs">
+                            <div class="filter-tab active" data-filter="all">
+                                <i class="fas fa-list"></i>
+                                Tất cả
+                                <span class="badge" id="tab-all">{{ orders|length }}</span>
+                            </div>
+                            <div class="filter-tab" data-filter="0">
+                                <i class="fas fa-clock"></i>
+                                Chờ xác nhận
+                                <span class="badge" id="tab-0">0</span>
+                            </div>
+                            <div class="filter-tab" data-filter="1">
+                                <i class="fas fa-box"></i>
+                                Đã xác nhận
+                                <span class="badge" id="tab-1">0</span>
+                            </div>
+                            <div class="filter-tab" data-filter="2">
+                                <i class="fas fa-shipping-fast"></i>
+                                Đã giao
+                                <span class="badge" id="tab-2">0</span>
+                            </div>
+                            <div class="filter-tab" data-filter="3">
+                                <i class="fas fa-undo"></i>
+                                Trả hàng
+                                <span class="badge" id="tab-3">0</span>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <select class="form-select form-select-lg">
-                                <option selected>Sắp xếp: Mới nhất</option>
-                                <option>Cũ nhất</option>
-                                <option>Giá cao - thấp</option>
-                                <option>Giá thấp - cao</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <input type="date" class="form-control form-control-lg">
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="search-box flex-grow-1 position-relative">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text"
+                                           name="search"
+                                           id="searchInput"
+                                           class="form-control form-control-lg"
+                                           placeholder="Tìm kiếm theo mã đơn, tên khách hàng..."
+                                           value="{{ search_query }}"
+                                           autocomplete="off"
+                                           spellcheck="false">
+                                    <button type="button"
+                                            class="search-clear-btn"
+                                            id="searchClearBtn"
+                                            onclick="clearSearchInput()"
+                                            style="display: none"
+                                            title="Xóa tìm kiếm">
+                                        <i class="fas fa-times-circle"></i>
+                                    </button>
+                                    <div class="search-loading" id="searchLoading">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Info -->
-                <div class="mb-3">
-                    <small class="text-muted">
-                        Hiển thị <strong>{{ orders|length }}</strong> đơn hàng
-                    </small>
-                </div>
-
-                <!-- Orders Table -->
-                <div class="orders-table-container">
-                    <div class="table-header-custom">
-                        <h5>
-                            <i class="fas fa-list-ul"></i>
-                            Danh sách đơn hàng
-                        </h5>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th style="width: 8%">
-                                        <input type="checkbox" class="form-check-input"> ID
-                                    </th>
-                                    <th style="width: 20%">Mã đơn hàng</th>
-                                    <th style="width: 22%">Khách hàng</th>
-                                    <th style="width: 15%">Tổng tiền</th>
-                                    <th style="width: 20%">Trạng thái</th>
-                                    <th style="width: 15%" class="text-center">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for order in orders %}
-                                <tr>
-                                    <td>
-                                        <input type="checkbox" class="form-check-input me-2">
-                                        <span class="order-id">#{{ order.id }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="order-code">{{ order.order_code }}</div>
-                                        <small class="text-muted">
-                                            <i class="far fa-clock"></i>
-                                            {{ order.created_at|date:"d/m/Y H:i" }}
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <div class="customer-info">
-                                            <div class="customer-avatar">
-                                                {{ order.address_full_name|first|upper }}
-                                            </div>
-                                            <div>
-                                                <div class="customer-name">{{ order.address_full_name }}</div>
+                    <!-- Orders Table -->
+                    <div class="orders-table-container">
+                        <div class="table-header-custom">
+                            <h5>
+                                <i class="fas fa-list-ul"></i>
+                                Danh sách đơn hàng
+                            </h5>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 8%">ID</th>
+                                        <th style="width: 20%">Mã đơn hàng</th>
+                                        <th style="width: 22%">Khách hàng</th>
+                                        <th style="width: 15%">Tổng tiền</th>
+                                        <th style="width: 20%">Trạng thái</th>
+                                        <th style="width: 15%" class="text-center">Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTableBody">
+                                    {% for order in orders %}
+                                        <tr class="order-row"
+                                            data-status="{{ order.status }}"
+                                            data-order-code="{{ order.order_code }}"
+                                            data-customer="{{ order.address_full_name }}">
+                                            <td>
+                                                <span class="order-id">{{ order.id }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="order-code">{{ order.order_code }}</div>
                                                 <small class="text-muted">
-                                                    <i class="fas fa-phone"></i> {{ order.address_phone_number }}
+                                                    <i class="far fa-clock"></i>
+                                                    {{ order.created_at|date:"d/m/Y H:i" }}
                                                 </small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="price-badge">{{ order.total_price|floatformat:0 }}₫</span>
-                                    </td>
-                                    <td>
-                                        {% if order.status == 0 %}
-                                        <span class="status-badge status-pending">
-                                            <i class="fas fa-clock"></i> Chờ xác nhận
-                                        </span>
-                                        {% elif order.status == 1 %}
-                                        <span class="status-badge status-confirmed">
-                                            <i class="fas fa-box"></i> Chờ lấy hàng
-                                        </span>
-                                        {% elif order.status == 2 %}
-                                        <span class="status-badge status-shipping">
-                                            <i class="fas fa-shipping-fast"></i> Đang giao
-                                        </span>
-                                        {% elif order.status == 3 %}
-                                        <span class="status-badge status-completed">
-                                            <i class="fas fa-check-circle"></i> Đã giao
-                                        </span>
-                                        {% endif %}
-
-                                        <div class="status-timeline">
-                                            <div class="timeline-dot {% if order.status >= 0 %}active{% endif %}"></div>
-                                            <div class="timeline-dot {% if order.status >= 1 %}active{% endif %}"></div>
-                                            <div class="timeline-dot {% if order.status >= 2 %}active{% endif %}"></div>
-                                            <div class="timeline-dot {% if order.status >= 3 %}active{% endif %}"></div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="action-buttons justify-content-center">
-                                            <a href="{% url 'orders_detail' order.id %}" class="btn btn-sm btn-view"
-                                                title="Xem chi tiết">
-                                                <i class="fas fa-eye"></i> Xem
-                                            </a>
-                                            {% if order.status < 3 %} <a href="{% url 'orders_approve_next' order.id %}"
-                                                class="btn btn-sm btn-approve" title="Duyệt đơn">
-                                                <i class="fas fa-check"></i> Duyệt
-                                                </a>
+                                            </td>
+                                            <td>
+                                                <div class="customer-info">
+                                                    <div class="customer-avatar">{{ order.address_full_name|first|upper }}</div>
+                                                    <div>
+                                                        <div class="customer-name">{{ order.address_full_name }}</div>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-phone"></i> {{ order.address_phone }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="price-badge">{{ order.total_price|floatformat:0 }}₫</span>
+                                            </td>
+                                            <td>
+                                                {% if order.status == 0 %}
+                                                    <span class="status-badge status-pending">
+                                                        <i class="fas fa-clock"></i> Chờ xác nhận
+                                                    </span>
+                                                {% elif order.status == 1 %}
+                                                    <span class="status-badge status-confirmed">
+                                                        <i class="fas fa-box"></i> Chờ lấy hàng
+                                                    </span>
+                                                {% elif order.status == 2 %}
+                                                    <span class="status-badge status-shipping">
+                                                        <i class="fas fa-shipping-fast"></i> Đang giao
+                                                    </span>
+                                                {% elif order.status == 3 %}
+                                                    <span class="status-badge status-completed">
+                                                        <i class="fas fa-check-circle"></i> Đã giao
+                                                    </span>
+                                                {% elif order.status == 4 %}
+                                                    <span class="status-badge status-pending">
+                                                        <i class="fas fa-undo"></i> Đang trả hàng
+                                                    </span>
+                                                {% elif order.status == 5 %}
+                                                    <span class="status-badge status-completed">
+                                                        <i class="fas fa-check-double"></i> Hoàn thành
+                                                    </span>
                                                 {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6">
-                                        <div class="empty-state">
-                                            <i class="fas fa-shopping-cart"></i>
-                                            <h4>Chưa có đơn hàng nào</h4>
-                                            <p class="text-muted">Các đơn hàng sẽ hiển thị tại đây</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                            </td>
+                                            <td>
+                                                <div class="action-buttons justify-content-center">
+                                                    <a href="{% url 'orders_detail' order.id %}"
+                                                       class="btn btn-sm btn-view"
+                                                       title="Xem chi tiết">
+                                                        <i class="fas fa-eye"></i> Xem
+                                                    </a>
+                                                    {% if order.status < 3 %}
+                                                        <a href="{% url 'orders_approve_next' order.id %}"
+                                                           class="btn btn-sm btn-approve"
+                                                           title="Duyệt đơn">
+                                                            <i class="fas fa-check"></i> Duyệt
+                                                        </a>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr id="emptyState">
+                                            <td colspan="6">
+                                                <div class="empty-state">
+                                                    <i class="fas fa-shopping-cart"></i>
+                                                    <h4>Chưa có đơn hàng nào</h4>
+                                                    <p class="text-muted">Các đơn hàng sẽ hiển thị tại đây</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+        <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+        <script>
+        let currentFilter = 'all';
+        let currentSearch = '';
 
-    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-    <script>
-        // Filter tabs interaction
+        // Count orders by status
+        function countOrdersByStatus() {
+            const statuses = {0: 0, 1: 0, 2: 0, 3: 0};
+            document.querySelectorAll('.order-row').forEach(row => {
+                const status = row.dataset.status;
+                if (status in statuses) {
+                    statuses[status]++;
+                }
+            });
+            
+            // Update badges
+            document.getElementById('tab-0').textContent = statuses[0];
+            document.getElementById('tab-1').textContent = statuses[1];
+            document.getElementById('tab-2').textContent = statuses[2];
+            document.getElementById('tab-3').textContent = statuses[3];
+            document.getElementById('count-status-0').textContent = statuses[0];
+            document.getElementById('count-status-1').textContent = statuses[1];
+            document.getElementById('count-status-2').textContent = statuses[2];
+            document.getElementById('count-status-3').textContent = statuses[3];
+        }
+
+        // Filter logic
+        function filterOrders() {
+            const rows = document.querySelectorAll('.order-row');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const status = row.dataset.status;
+                const orderCode = row.dataset.orderCode.toLowerCase();
+                const customer = row.dataset.customer.toLowerCase();
+                const searchTerm = currentSearch.toLowerCase();
+
+                // Status filter
+                const statusMatch = currentFilter === 'all' || status === currentFilter;
+
+                // Search filter
+                const searchMatch = orderCode.includes(searchTerm) || customer.includes(searchTerm);
+
+                if (statusMatch && searchMatch) {
+                    row.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+
+            // Update display count
+            document.getElementById('displayCount').textContent = visibleCount;
+
+            // Show empty state if no results
+            const emptyState = document.getElementById('emptyState');
+            if (visibleCount === 0) {
+                if (!emptyState) {
+                    const tbody = document.getElementById('ordersTableBody');
+                    const tr = document.createElement('tr');
+                    tr.id = 'emptyState';
+                    tr.innerHTML = `
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <i class="fas fa-shopping-cart"></i>
+                                <h4>Không tìm thấy đơn hàng</h4>
+                                <p class="text-muted">Thử thay đổi bộ lọc hoặc tìm kiếm khác</p>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            } else {
+                if (emptyState) emptyState.remove();
+            }
+        }
+
+        // Filter tab click
         document.querySelectorAll('.filter-tab').forEach(tab => {
             tab.addEventListener('click', function () {
                 document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
-                // TODO: Implement filter logic
+                
+                currentFilter = this.dataset.filter;
+                filterOrders();
             });
         });
 
-        // Search functionality
-        document.querySelector('.search-box input').addEventListener('input', function (e) {
-            const searchTerm = e.target.value.toLowerCase();
-            // TODO: Implement search logic
-            console.log('Searching for:', searchTerm);
+        // Stat card click
+        document.querySelectorAll('.stat-card').forEach(card => {
+            card.addEventListener('click', function () {
+                const filter = this.dataset.status;
+                
+                // Update active tab
+                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                if (filter === 'all') {
+                    document.querySelector('.filter-tab[data-filter="all"]').classList.add('active');
+                } else {
+                    document.querySelector(`.filter-tab[data-filter="${filter}"]`).classList.add('active');
+                }
+                
+                currentFilter = filter;
+                filterOrders();
+            });
         });
 
-        // Select all checkbox
-        const selectAllCheckbox = document.querySelector('thead input[type="checkbox"]');
-        const rowCheckboxes = document.querySelectorAll('tbody input[type="checkbox"]');
+        // Search input
+        document.getElementById('searchInput').addEventListener('input', function (e) {
+            currentSearch = e.target.value;
+            filterOrders();
+        });
 
-        if (selectAllCheckbox) {
-            selectAllCheckbox.addEventListener('change', function () {
-                rowCheckboxes.forEach(checkbox => {
-                    checkbox.checked = this.checked;
-                });
-            });
-        }
+        // Initialize
+        countOrdersByStatus();
+        filterOrders();
 
         // Export button
         document.querySelector('.export-btn').addEventListener('click', function () {
             alert('Chức năng xuất Excel đang được phát triển!');
-            // TODO: Implement export logic
         });
-    </script>
-</body>
-
+        </script>
+    </body>
 </html>

@@ -1,15 +1,14 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="vi">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chi tiết sản phẩm - Admin</title>
-  <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
-  <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
-  <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
-  <style>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chi tiết sản phẩm - Admin</title>
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/all.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/admin.css' %}" rel="stylesheet" />
+    <style>
     .main-image-container {
       position: relative;
       width: 100%;
@@ -183,236 +182,244 @@
       font-size: 0.85rem;
       font-weight: 600;
     }
-  </style>
-</head>
-
-<body>
-  <div class="container-fluid">
-    <div class="row">
-      <!-- Sidebar -->
-      <div class="col-md-2 sidebar">
-        <div class="text-white ps-3 mb-4" style="border-bottom: 1px solid rgba(255,255,255,0.2);
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 sidebar">
+          <div class="text-white ps-3 mb-4"
+               style="border-bottom: 1px solid rgba(255,255,255,0.2);
                       padding: 20px 0;
                       text-align: center">
-          <h4 class="m-0">
-            <i class="fas fa-cog"></i> ADMIN
-          </h4>
+            <h4 class="m-0">
+              <i class="fas fa-cog"></i> ADMIN
+            </h4>
+          </div>
+          <a href="{% url 'product_list' %}"><i class="fas fa-box"></i> Danh sách sản phẩm</a>
+          <a href="{% url 'product_create' %}"><i class="fas fa-plus"></i> Thêm sản phẩm</a>
+          <a href="#"><i class="fas fa-tags"></i> Danh mục</a>
+          <a href="#"><i class="fas fa-user"></i> Khách hàng</a>
+          <a href="{% url 'orders_list' %}"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
+          <a href="{% url 'returns_list' %}" class="active">
+            <i class="fas fa-undo"></i> Trả hàng
+          </a>
         </div>
-        <a href="{% url 'product_list' %}"><i class="fas fa-box"></i> Danh sách sản phẩm</a>
-        <a href="{% url 'product_create' %}"><i class="fas fa-plus"></i> Thêm sản phẩm</a>
-        <a href="#"><i class="fas fa-tags"></i> Danh mục</a>
-        <a href="#"><i class="fas fa-user"></i> Khách hàng</a>
-        <a href="{% url 'orders_list' %}"><i class="fas fa-chart-bar"></i> Đơn hàng</a>
-      </div>
-
-      <!-- Main content -->
-      <div class="col-md-10 main-content">
-        <div class="page-header-modern">
-          <h1>
-            <i class="fas fa-info-circle"></i> Chi tiết sản phẩm
-          </h1>
-        </div>
-
-        <div class="row g-4">
-          <div class="col-md-8">
-            <div class="card shadow-sm modern-card">
-              <div class="card-header modern-card-header">
-                <h5>
-                  <i class="fas fa-cube"></i> {{ product.name }}
-                </h5>
-              </div>
-              <div class="card-body">
-                <!-- GALLERY ẢNH -->
-                <div class="details-grid">
-                  <div class="grid-full">
-                    <label>
-                      <i class="fas fa-images"></i> Hình ảnh sản phẩm
-                    </label>
-
-                    {% if images %}
-                    <!-- ẢNH CHÍNH -->
-                    <div class="main-image-container">
-                      {% if image %}
-                      <img id="mainImage" src="{{ image.document.file }}" alt="Ảnh chính" class="main-image"
-                        data-is-main="{{ image.is_main|yesno:'true,false' }}">
-
-                      <span class="main-badge" id="mainBadge"
-                        style="display: {% if image.is_main %}block{% else %}none{% endif %}">
-                        <i class="fas fa-star"></i> Ảnh chính
-                      </span>
-
-                      <div class="zoom-icon" onclick="openModal()">
-                        <i class="fas fa-search-plus"></i>
-                      </div>
-
-                      <div class="image-counter">
-                        <span id="currentIndex">1</span> / <span id="totalImages">{{ images|length }}</span>
-                      </div>
+        <!-- Main content -->
+        <div class="col-md-10 main-content">
+          <div class="page-header-modern">
+            <h1>
+              <i class="fas fa-info-circle"></i> Chi tiết sản phẩm
+            </h1>
+          </div>
+          <div class="row g-4">
+            <div class="col-md-8">
+              <div class="card shadow-sm modern-card">
+                <div class="card-header modern-card-header">
+                  <h5>
+                    <i class="fas fa-cube"></i> {{ product.name }}
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <!-- GALLERY ẢNH -->
+                  <div class="details-grid">
+                    <div class="grid-full">
+                      <label>
+                        <i class="fas fa-images"></i> Hình ảnh sản phẩm
+                      </label>
+                      {% if images %}
+                        <!-- ẢNH CHÍNH -->
+                        <div class="main-image-container">
+                          {% if image %}
+                            <img id="mainImage"
+                                 src="{{ image.document.file }}"
+                                 alt="Ảnh chính"
+                                 class="main-image"
+                                 data-is-main="{{ image.is_main|yesno:'true,false' }}">
+                            <span class="main-badge"
+                                  id="mainBadge"
+                                  style="display: {% if image.is_main %}block{% else %}none{% endif %}">
+                              <i class="fas fa-star"></i> Ảnh chính
+                            </span>
+                            <div class="zoom-icon" onclick="openModal()">
+                              <i class="fas fa-search-plus"></i>
+                            </div>
+                            <div class="image-counter">
+                              <span id="currentIndex">1</span> / <span id="totalImages">{{ images|length }}</span>
+                            </div>
+                          {% else %}
+                            <div class="no-images">
+                              <i class="fas fa-image"></i>
+                              <p>Không có ảnh</p>
+                            </div>
+                          {% endif %}
+                        </div>
+                        <!-- THUMBNAILS -->
+                        <div class="thumbnail-container">
+                          {% for img in images %}
+                            <img src="{{ img.document.file }}"
+                                 alt="Ảnh {{ forloop.counter }}"
+                                 class="thumbnail {% if forloop.first %}active{% endif %}"
+                                 data-full="{{ img.document.file }}"
+                                 data-is-main="{{ img.is_main|yesno:'true,false' }}"
+                                 data-index="{{ forloop.counter }}"
+                                 onclick="changeImage(this)">
+                          {% endfor %}
+                        </div>
                       {% else %}
-                      <div class="no-images">
-                        <i class="fas fa-image"></i>
-                        <p>Không có ảnh</p>
-                      </div>
+                        <div class="no-images">
+                          <i class="fas fa-image"></i>
+                          <p>Chưa có hình ảnh nào</p>
+                        </div>
                       {% endif %}
                     </div>
-
-                    <!-- THUMBNAILS -->
-                    <div class="thumbnail-container">
-                      {% for img in images %}
-                      <img src="{{ img.document.file }}" alt="Ảnh {{ forloop.counter }}"
-                        class="thumbnail {% if forloop.first %}active{% endif %}" data-full="{{ img.document.file }}"
-                        data-is-main="{{ img.is_main|yesno:'true,false' }}" data-index="{{ forloop.counter }}"
-                        onclick="changeImage(this)">
-                      {% endfor %}
+                    <!-- THÔNG TIN SẢN PHẨM -->
+                    <div>
+                      <label>ID</label>
+                      <p>{{ product.id }}</p>
                     </div>
-                    {% else %}
-                    <div class="no-images">
-                      <i class="fas fa-image"></i>
-                      <p>Chưa có hình ảnh nào</p>
+                    <div>
+                      <label>Tên sản phẩm</label>
+                      <p>{{ product.name }}</p>
                     </div>
-                    {% endif %}
-                  </div>
-
-                  <!-- THÔNG TIN SẢN PHẨM -->
-                  <div>
-                    <label>ID</label>
-                    <p>{{ product.id }}</p>
-                  </div>
-                  <div>
-                    <label>Tên sản phẩm</label>
-                    <p>{{ product.name }}</p>
-                  </div>
-                  <div class="grid-full">
-                    <label>Mô tả</label>
-                    <p class="desc">{{ product.description|default:"Không có mô tả" }}</p>
-                  </div>
-                  <div>
-                    <label>Giá</label>
-                    <p><strong>{{ product.price|floatformat:0 }}₫</strong></p>
-                  </div>
-                  <div>
-                    <label>Giá giảm</label>
-                    <p>
-                      {% if product.discount_price %}
-                      <span class="text-danger"><strong>{{ product.discount_price|floatformat:0 }}₫</strong></span>
+                    <div class="grid-full">
+                      <label>Mô tả</label>
+                      <p class="desc">{{ product.description|default:"Không có mô tả" }}</p>
+                    </div>
+                    <div>
+                      <label>Giá</label>
+                      <p>
+                        <strong>{{ product.price|floatformat:0 }}₫</strong>
+                      </p>
+                    </div>
+                    <div>
+                      <label>Giá giảm</label>
+                      <p>
+                        {% if product.discount_price %}
+                          <span class="text-danger"><strong>{{ product.discount_price|floatformat:0 }}₫</strong></span>
+                        {% else %}
+                          <span class="text-muted">Không có</span>
+                        {% endif %}
+                      </p>
+                    </div>
+                    <div>
+                      <label>Đánh giá</label>
+                      <p>
+                        <i class="fas fa-star text-warning"></i> {{ product.rating|default:"0" }}
+                      </p>
+                    </div>
+                    <div>
+                      <label>Số đánh giá</label>
+                      <p>{{ product.num_reviews|default:"0" }} đánh giá</p>
+                    </div>
+                    <div>
+                      <label>Trạng thái</label>
+                      {% if product.is_available %}
+                        <span class="badge bg-success">
+                          <i class="fas fa-check-circle"></i> Còn hàng
+                        </span>
                       {% else %}
-                      <span class="text-muted">Không có</span>
+                        <span class="badge bg-danger">
+                          <i class="fas fa-times-circle"></i> Hết hàng
+                        </span>
                       {% endif %}
-                    </p>
-                  </div>
-                  <div>
-                    <label>Đánh giá</label>
-                    <p>
-                      <i class="fas fa-star text-warning"></i> {{ product.rating|default:"0" }}
-                    </p>
-                  </div>
-                  <div>
-                    <label>Số đánh giá</label>
-                    <p>{{ product.num_reviews|default:"0" }} đánh giá</p>
-                  </div>
-                  <div>
-                    <label>Trạng thái</label>
-                    {% if product.is_available %}
-                    <span class="badge bg-success">
-                      <i class="fas fa-check-circle"></i> Còn hàng
-                    </span>
-                    {% else %}
-                    <span class="badge bg-danger">
-                      <i class="fas fa-times-circle"></i> Hết hàng
-                    </span>
-                    {% endif %}
-                  </div>
-                  <div>
-                    <label>Phổ biến</label>
-                    <p>
-                      {% if product.is_popular %}
-                      <i class="fas fa-fire text-danger"></i> Có
-                      {% else %}
-                      Không
-                      {% endif %}
-                    </p>
-                  </div>
-                  <div>
-                    <label>Flash sale</label>
-                    <p>
-                      {% if product.is_sale %}
-                      <i class="fas fa-bolt text-warning"></i> Có
-                      {% else %}
-                      Không
-                      {% endif %}
-                    </p>
-                  </div>
-                  <div>
-                    <label>Bán chạy</label>
-                    <p>
-                      {% if product.is_best_sale %}
-                      <i class="fas fa-trophy text-success"></i> Có
-                      {% else %}
-                      Không
-                      {% endif %}
-                    </p>
-                  </div>
-                  <div>
-                    <label>Số lượng đã bán</label>
-                    <p><strong>{{ product.sold|default:"0" }}</strong> sản phẩm</p>
+                    </div>
+                    <div>
+                      <label>Phổ biến</label>
+                      <p>
+                        {% if product.is_popular %}
+                          <i class="fas fa-fire text-danger"></i> Có
+                        {% else %}
+                          Không
+                        {% endif %}
+                      </p>
+                    </div>
+                    <div>
+                      <label>Flash sale</label>
+                      <p>
+                        {% if product.is_sale %}
+                          <i class="fas fa-bolt text-warning"></i> Có
+                        {% else %}
+                          Không
+                        {% endif %}
+                      </p>
+                    </div>
+                    <div>
+                      <label>Bán chạy</label>
+                      <p>
+                        {% if product.is_best_sale %}
+                          <i class="fas fa-trophy text-success"></i> Có
+                        {% else %}
+                          Không
+                        {% endif %}
+                      </p>
+                    </div>
+                    <div>
+                      <label>Số lượng đã bán</label>
+                      <p>
+                        <strong>{{ product.sold|default:"0" }}</strong> sản phẩm
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Action Card -->
-          <div class="col-md-4">
-            <div class="card shadow-sm action-card">
-              <div class="card-header bg-light">
-                <h6>
-                  <i class="fas fa-cog"></i> Hành động
-                </h6>
+            <!-- Action Card -->
+            <div class="col-md-4">
+              <div class="card shadow-sm action-card">
+                <div class="card-header bg-light">
+                  <h6>
+                    <i class="fas fa-cog"></i> Hành động
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <a href="{% url 'product_update' product.id %}"
+                     class="btn btn-warning w-100 mb-3">
+                    <i class="fas fa-edit"></i> Sửa sản phẩm
+                  </a>
+                  <a href="{% url 'product_list' %}" class="btn btn-secondary w-100">
+                    <i class="fas fa-arrow-left"></i> Quay lại danh sách
+                  </a>
+                </div>
               </div>
-              <div class="card-body">
-                <a href="{% url 'product_update' product.id %}" class="btn btn-warning w-100 mb-3">
-                  <i class="fas fa-edit"></i> Sửa sản phẩm
-                </a>
-                <a href="{% url 'product_list' %}" class="btn btn-secondary w-100">
-                  <i class="fas fa-arrow-left"></i> Quay lại danh sách
-                </a>
-              </div>
-            </div>
-
-            <!-- Info Card -->
-            <div class="card shadow-sm mt-3">
-              <div class="card-header bg-light">
-                <h6>
-                  <i class="fas fa-info-circle"></i> Thông tin thêm
-                </h6>
-              </div>
-              <div class="card-body">
-                <p class="small mb-2">
-                  <i class="fas fa-clock text-muted"></i>
-                  <strong>Ngày tạo:</strong><br>
-                  {{ product.created_at|date:"d/m/Y H:i" }}
-                </p>
-                <p class="small mb-0">
-                  <i class="fas fa-edit text-muted"></i>
-                  <strong>Cập nhật:</strong><br>
-                  {{ product.updated_at|date:"d/m/Y H:i" }}
-                </p>
+              <!-- Info Card -->
+              <div class="card shadow-sm mt-3">
+                <div class="card-header bg-light">
+                  <h6>
+                    <i class="fas fa-info-circle"></i> Thông tin thêm
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <p class="small mb-2">
+                    <i class="fas fa-clock text-muted"></i>
+                    <strong>Ngày tạo:</strong>
+                    <br>
+                    {{ product.created_at|date:"d/m/Y H:i" }}
+                  </p>
+                  <p class="small mb-0">
+                    <i class="fas fa-edit text-muted"></i>
+                    <strong>Cập nhật:</strong>
+                    <br>
+                    {{ product.updated_at|date:"d/m/Y H:i" }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Modal zoom ảnh -->
-  <div id="imageModal" class="image-modal" onclick="closeModal()">
-    <span class="close-modal">&times;</span>
-    <img id="modalImage" class="modal-content-custom" src="" alt="Zoomed Image">
-  </div>
-
-  <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-  <script>
+    <!-- Modal zoom ảnh -->
+    <div id="imageModal" class="image-modal" onclick="closeModal()">
+      <span class="close-modal">&times;</span>
+      <img id="modalImage"
+           class="modal-content-custom"
+           src=""
+           alt="Zoomed Image">
+    </div>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script>
     // Thay đổi ảnh chính khi click thumbnail
     function changeImage(thumbnail) {
       const mainImage = document.getElementById('mainImage');
@@ -477,7 +484,6 @@
     document.getElementById('modalImage').addEventListener('click', function (event) {
       event.stopPropagation();
     });
-  </script>
-</body>
-
+    </script>
+  </body>
 </html>
