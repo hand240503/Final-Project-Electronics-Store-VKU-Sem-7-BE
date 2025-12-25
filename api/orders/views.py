@@ -143,7 +143,7 @@ class CancelOrderAPIView(APIView):
                 type_code="order_cancelled",
                 title="Đơn hàng đã hủy",
                 content=f"Đơn hàng {order.order_code} đã được hủy thành công",
-                redirect_url=f"/orders/{order.id}",
+                redirect_url=f"{order.id}",
                 metadata={"order_id": order.id, "order_code": order.order_code},
             )
         except Exception as e:
@@ -251,7 +251,7 @@ class ReturnOrderAPIView(APIView):
                 type_code="order_returned",
                 title="Yêu cầu trả hàng đã được gửi",
                 content=f"Yêu cầu trả hàng cho đơn {order.order_code} đang được xem xét. Chúng tôi sẽ xử lý trong 24-48h.",
-                redirect_url=f"/orders/{order.id}",
+                redirect_url=f"{order.id}",
                 metadata={
                     "order_id": order.id,
                     "order_code": order.order_code,
@@ -310,7 +310,7 @@ class CancelReturnRequestAPIView(APIView):
                 type_code="return_cancelled",
                 title="Đã hủy yêu cầu trả hàng",
                 content=f"Yêu cầu trả hàng cho đơn {order.order_code} đã được hủy.",
-                redirect_url=f"/orders/{order.id}",
+                redirect_url=f"{order.id}",
                 metadata={"order_id": order.id, "order_code": order.order_code},
             )
         except Exception as e:
@@ -358,7 +358,7 @@ def orders_approve_next(request, order_id):
                     type_code="order_confirmed",
                     title="Đơn hàng đã được xác nhận",
                     content=f"Đơn hàng {order.order_code} đã được xác nhận và đang chờ lấy hàng.",
-                    redirect_url=f"/orders/{order.id}",
+                    redirect_url=f"{order.id}",
                     metadata={"order_id": order.id, "order_code": order.order_code},
                 )
             elif order.status == 2:  # Chờ giao hàng
@@ -419,7 +419,7 @@ def orders_detail(request, pk):
                         type_code="return_approved",
                         title="Yêu cầu trả hàng đã được chấp nhận",
                         content=f"Yêu cầu trả hàng cho đơn {order.order_code} đã được chấp nhận. Vui lòng gửi hàng về địa chỉ của chúng tôi.",
-                        redirect_url=f"/orders/{order.id}",
+                        redirect_url=f"{order.id}",
                         metadata={"order_id": order.id, "order_code": order.order_code},
                     )
                 except Exception as e:
@@ -436,7 +436,7 @@ def orders_detail(request, pk):
                         type_code="return_rejected",
                         title="Yêu cầu trả hàng bị từ chối",
                         content=f"Yêu cầu trả hàng cho đơn {order.order_code} không được chấp nhận.",
-                        redirect_url=f"/orders/{order.id}",
+                        redirect_url=f"{order.id}",
                         metadata={"order_id": order.id, "order_code": order.order_code},
                     )
                 except Exception as e:
@@ -457,7 +457,7 @@ def orders_detail(request, pk):
                     type_code="order_confirmed",
                     title="Đơn hàng đã được xác nhận",
                     content=f"Đơn hàng {order.order_code} đã được xác nhận.",
-                    redirect_url=f"/orders/{order.id}",
+                    redirect_url=f"{order.id}",
                     metadata={"order_id": order.id, "order_code": order.order_code},
                 )
             elif new_status == 2:  # Chờ giao hàng
@@ -474,7 +474,7 @@ def orders_detail(request, pk):
                     type_code="order_cancelled",
                     title="Đơn hàng đã hủy",
                     content=f"Đơn hàng {order.order_code} đã bị hủy",
-                    redirect_url=f"/orders/{order.id}",
+                    redirect_url=f"{order.id}",
                     metadata={"order_id": order.id, "order_code": order.order_code},
                 )
         except Exception as e:
@@ -595,7 +595,7 @@ def approve_return(request, order_id):
             type_code="return_approved",
             title="Yêu cầu trả hàng đã được chấp nhận",
             content=f"Yêu cầu trả hàng cho đơn {order.order_code} đã được chấp nhận. Vui lòng gửi hàng về địa chỉ của chúng tôi trong vòng 7 ngày.",
-            redirect_url=f"/orders/{order.id}",
+            redirect_url=f"{order.id}",
             metadata={
                 "order_id": order.id,
                 "order_code": order.order_code,
@@ -642,7 +642,7 @@ def reject_return(request, order_id):
             type_code="return_rejected",
             title="Yêu cầu trả hàng bị từ chối",
             content=f"Yêu cầu trả hàng cho đơn {order.order_code} không được chấp nhận. Lý do: {reason}",
-            redirect_url=f"/orders/{order.id}",
+            redirect_url=f"{order.id}",
             metadata={
                 "order_id": order.id,
                 "order_code": order.order_code,
@@ -690,7 +690,7 @@ def complete_return(request, order_id):
             type_code="return_completed",
             title="Trả hàng hoàn tất",
             content=f"Chúng tôi đã nhận được hàng trả cho đơn {order.order_code}. Sẽ xử lý hoàn tiền trong 3-5 ngày làm việc.",
-            redirect_url=f"/orders/{order.id}",
+            redirect_url=f"{order.id}",
             metadata={
                 "order_id": order.id,
                 "order_code": order.order_code,
@@ -704,3 +704,50 @@ def complete_return(request, order_id):
         request, f"✓ Đã hoàn thành xử lý trả hàng cho đơn {order.order_code}"
     )
     return redirect("returns_detail", order_id=order.id)
+
+
+
+
+class ProcessedReturnOrdersView(APIView):
+    """
+    GET /api/orders/processed-returns/{user_id}/
+    Lấy danh sách đơn hàng đang trả hàng đã được xử lý (approved/rejected)
+    
+    Logic:
+    - status = 4 (Đang trong quá trình trả hàng)
+    - is_return != 2 (0=từ chối hoặc 1=chấp nhận, không phải đang xem xét)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        # Kiểm tra user tồn tại
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"}, 
+                status=http_status.HTTP_404_NOT_FOUND
+            )
+
+        # Chỉ cho phép user xem đơn hàng của chính mình (hoặc admin)
+        if request.user.id != user_id and not request.user.is_staff:
+            return Response(
+                {"error": "Permission denied"}, 
+                status=http_status.HTTP_403_FORBIDDEN
+            )
+
+        # Lấy các đơn hàng status=4 và is_return!=2
+        orders = Order.objects.filter(
+            user=user,
+            status=4,
+        ).exclude(
+            is_return=2
+        ).order_by('-updated_at')
+
+        serializer = OrderSerializer(orders, many=True)
+        
+        return Response({
+            "user_id": user_id,
+            "total_orders": orders.count(),
+            "orders": serializer.data
+        }, status=http_status.HTTP_200_OK)

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import OrderCreateView, OrdersByUserView, OrderDetailView, CancelOrderAPIView, ReturnOrderAPIView,CancelReturnRequestAPIView
+from .views import OrderCreateView, OrdersByUserView, OrderDetailView, CancelOrderAPIView, ReturnOrderAPIView,CancelReturnRequestAPIView, ProcessedReturnOrdersView
 from . import views
 
 urlpatterns = [
@@ -14,6 +14,7 @@ urlpatterns = [
     path('cancel/<int:order_id>/', CancelOrderAPIView.as_view(), name='cancel-order'),
     path('return/<int:order_id>/', ReturnOrderAPIView.as_view(), name='return-order'),
     path('cancel-return/<int:order_id>/', CancelReturnRequestAPIView.as_view(), name='cancel-return-request'),
+    path('processed-returns/<int:user_id>/', ProcessedReturnOrdersView.as_view(), name='processed_returns_by_user'),
 
     path('admin/returns/', views.returns_list, name='returns_list'),
     path('admin/returns/<int:order_id>/', views.returns_detail, name='returns_detail'),

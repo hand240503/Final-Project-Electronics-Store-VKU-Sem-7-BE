@@ -9,10 +9,12 @@ from .forms import ProductForm
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .serializers import ProductSearchSerializer
+from .serializers import get_valid_url 
 from django.db.models import Q
+from rest_framework.decorators import api_view 
 
 import requests
-import cloudinary.uploader  # ← THÊM IMPORT NÀY
+import cloudinary.uploader
 
 @require_http_methods(["GET"])
 def product_list(request):
@@ -328,3 +330,223 @@ class ProductSearchView(APIView):
             'count': products.count(),
             'results': serializer.data
         })
+
+
+
+@api_view(['GET'])
+def get_products_info_for_chatbot(request):
+    """
+    API endpoint để lấy thông tin sản phẩm cho chatbot AI
+    GET /api/products/chatbot-info/
+    
+    Query params:
+    - q: tìm kiếm theo tên sản phẩm
+    - category: lọc theo category ID
+    - limit: giới hạn số lượng (mặc định 20)
+    """
+    try:
+        # Lấy query params
+        search_query = request.query_params.get('q', '').strip()
+        category_id = request.query_params.get('category', None)
+        limit = int(request.query_params.get('limit', 20))
+        
+        # Base queryset - chỉ lấy sản phẩm available
+        products = Product.objects.filter(is_available=True).select_related(
+            'brand', 'category'
+        ).prefetch_related(
+            'documents__document'
+        )
+        
+        # Áp dụng filter
+        if search_query:
+            products = products.filter(
+                Q(name__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+        
+        if category_id:
+            products = products.filter(category_id=category_id)
+        
+        # Giới hạn số lượng
+        products = products[:limit]
+        
+        # Format dữ liệu cho chatbot (theo format ProductModel của Flutter)
+        products_data = []
+        for product in products:
+            # ✅ Lấy ảnh chính giống ProductSearchSerializer
+            main_doc = product.documents.filter(is_main=True).first()
+            main_image_url = None
+            if main_doc and main_doc.document and main_doc.document.file:
+                url = main_doc.document.file.url
+                main_image_url = get_valid_url(request, url)
+            
+            # Tính giá và giảm giá
+            original_price = float(product.price)
+            discount_price = float(product.discount_price) if product.discount_price else None
+            discount_percent = None
+            if discount_price:
+                discount_percent = round(((original_price - discount_price) / original_price) * 100)
+            
+            # ✅ Format theo ProductModel Flutter
+            product_info = {
+                'id': product.id,
+                'name': product.name,  # Flutter dùng 'name' để map sang 'title'
+                'description': product.description,
+                'brand': {
+                    'name': product.brand.name if product.brand else ''
+                },
+                'category': product.category.name if product.category else None,
+                'price': str(int(original_price)),  # ✅ Chuyển sang int trước để bỏ .0
+                'discount_price': str(int(discount_price)) if discount_price else None,  # ✅ Same
+                'main_image': main_image_url,
+                'rating': float(product.rating),
+                'num_reviews': product.num_reviews,
+                'sold': product.sold,
+                'is_popular': product.is_popular,
+                'is_sale': product.is_sale,
+                'is_best_sale': product.is_best_sale,
+            }
+            products_data.append(product_info)
+        
+        # Lấy thêm thông tin categories để chatbot có thể tư vấn
+        categories = Category.objects.filter(parent__isnull=False).values('id', 'name', 'parent__name')
+        categories_data = [
+            {
+                'id': cat['id'],
+                'name': cat['name'],
+                'parent': cat['parent__name']
+            }
+            for cat in categories
+        ]
+        
+        return Response({
+            'success': True,
+            'total_products': len(products_data),
+            'products': products_data,
+            'categories': categories_data,
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def get_product_detail_for_chatbot(request, product_id):
+    """
+    API endpoint để lấy chi tiết 1 sản phẩm cho chatbot
+    GET /api/products/chatbot-info/<int:product_id>/
+    """
+    try:
+        product = Product.objects.filter(
+            id=product_id,
+            is_available=True
+        ).select_related('brand', 'category').prefetch_related(
+            'variants',
+            'documents__document',
+            'reviews__user',
+            'shipping_info',
+            'return_policy'
+        ).first()
+        
+        if not product:
+            return Response({
+                'success': False,
+                'error': 'Sản phẩm không tồn tại hoặc không còn bán'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # ✅ Ảnh chính giống ProductSearchSerializer
+        main_doc = product.documents.filter(is_main=True).first()
+        main_image_url = None
+        if main_doc and main_doc.document and main_doc.document.file:
+            url = main_doc.document.file.url
+            main_image_url = get_valid_url(request, url)
+        
+        # ✅ Các ảnh phụ cũng dùng get_valid_url
+        other_images = []
+        for img in product.documents.filter(is_main=False):
+            if img.document and img.document.file:
+                url = img.document.file.url
+                other_images.append(get_valid_url(request, url))
+        
+        # Variants
+        variants_data = []
+        for variant in product.variants.all():
+            variants_data.append({
+                'id': variant.id,
+                'name': variant.name,
+                'color': variant.color,
+                'size': variant.size,
+                'stock': variant.stock,
+                'price': str(variant.price) if variant.price else None,
+                'discount_price': str(variant.discount_price) if variant.discount_price else None,
+            })
+        
+        # Reviews
+        reviews_data = []
+        for review in product.reviews.all()[:5]:  # Lấy 5 review mới nhất
+            reviews_data.append({
+                'user': review.user.username,
+                'rating': review.rating,
+                'comment': review.comment,
+                'created_at': review.created_at.strftime('%d/%m/%Y')
+            })
+        
+        # Shipping info
+        shipping_info = []
+        for info in product.shipping_info.all():
+            shipping_info.append(info.info)
+        
+        # Return policy
+        return_policy = []
+        for policy in product.return_policy.all():
+            return_policy.append(policy.policy_text)
+        
+        # Tính giá
+        original_price = float(product.price)
+        discount_price = float(product.discount_price) if product.discount_price else None
+        discount_percent = None
+        if discount_price:
+            discount_percent = round(((original_price - discount_price) / original_price) * 100)
+        
+        # ✅ Format theo ProductModel Flutter
+        product_data = {
+            'id': product.id,
+            'name': product.name,
+            'description': product.description,
+            'brand': {
+                'id': product.brand.id if product.brand else None,
+                'name': product.brand.name if product.brand else '',
+            },
+            'category': {
+                'id': product.category.id if product.category else None,
+                'name': product.category.name if product.category else None,
+            },
+            'price': str(int(original_price)),  # ✅ Chuyển sang int trước
+            'discount_price': str(int(discount_price)) if discount_price else None,  # ✅ Same
+            'rating': float(product.rating),
+            'num_reviews': product.num_reviews,
+            'sold': product.sold,
+            'is_popular': product.is_popular,
+            'is_sale': product.is_sale,
+            'is_best_sale': product.is_best_sale,
+            'main_image': main_image_url,
+            'other_images': other_images,
+            'variants': variants_data,
+            'reviews': reviews_data,
+            'shipping_info': shipping_info,
+            'return_policy': return_policy,
+        }
+        
+        return Response({
+            'success': True,
+            'product': product_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

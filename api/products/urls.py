@@ -27,6 +27,8 @@ urlpatterns = [
 
     # Tìm kiếm sản phẩm theo tên
     path('search/', ProductSearchView.as_view(), name='product-search'),
+    path('chatbot-info/',views.get_products_info_for_chatbot,name='products_chatbot_info'),
+    path('chatbot-info/<int:product_id>/',views.get_product_detail_for_chatbot,name='product_detail_chatbot_info'),
 ]
 
 

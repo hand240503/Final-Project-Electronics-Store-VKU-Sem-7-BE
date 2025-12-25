@@ -108,7 +108,7 @@ class NotificationService:
             type_code=config['type_code'],
             title=config['title'],
             content=config['content'],
-            redirect_url=f'/orders/{order_id}',
+            redirect_url=f'{order_id}',
             metadata={'order_id': order_id, 'status': status}
         )
     
