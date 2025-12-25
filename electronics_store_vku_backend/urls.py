@@ -14,4 +14,5 @@ urlpatterns = [
     path('api/notifications/', include('api.notifications.urls')),
     path('api/rating/', include('api.rating.urls')), 
     path('api/recommender/', include('api.recommender.urls')),
+    path('api/chatbot/', include('api.chatbot.urls')),
 ]
