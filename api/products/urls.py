@@ -5,6 +5,9 @@ from .views import (
     ParentCategoryProductsAPIView,
     ProductDetailAPIView,
     ProductSearchView,
+    create_product_rating,
+    get_product_reviews,
+    delete_product_review,
 )
 from . import views
 urlpatterns = [
@@ -29,6 +32,11 @@ urlpatterns = [
     path('search/', ProductSearchView.as_view(), name='product-search'),
     path('chatbot-info/',views.get_products_info_for_chatbot,name='products_chatbot_info'),
     path('chatbot-info/<int:product_id>/',views.get_product_detail_for_chatbot,name='product_detail_chatbot_info'),
+
+    # Đánh giá và nhận xét sản phẩm
+    path('<int:order_id>/rating/', create_product_rating, name='create-product-rating'),
+    path('<int:product_id>/reviews/', get_product_reviews, name='get-product-reviews'),
+    path('reviews/<int:review_id>/', delete_product_review, name='delete-product-review'),
 ]
 
 

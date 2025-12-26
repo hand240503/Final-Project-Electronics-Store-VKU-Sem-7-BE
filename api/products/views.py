@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import CategoryParentFESerializer, ProductsByCategoryFESerializer, ProductDetailSerializer
+from .serializers import CategoryParentFESerializer, ProductsByCategoryFESerializer, ProductDetailSerializer,ReviewSerializer
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from .models import Product, Document, ProductDocument, Category
@@ -11,10 +11,13 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .serializers import ProductSearchSerializer
 from .serializers import get_valid_url 
 from django.db.models import Q
-from rest_framework.decorators import api_view 
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 import requests
 import cloudinary.uploader
+from .models import Review
+from django.db.models import Avg, Count
+from api.orders.models import Order, OrderItem
 
 @require_http_methods(["GET"])
 def product_list(request):
@@ -36,7 +39,7 @@ def product_list(request):
         )
     
     # Phân trang - 10 sản phẩm trên mỗi trang
-    paginator = Paginator(products, 10)
+    paginator = Paginator(products, 3)
     page = request.GET.get('page')
     
     try:
@@ -550,3 +553,432 @@ def get_product_detail_for_chatbot(request, product_id):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_order_reviews(request, order_id):
+    """
+    API để người dùng rating tất cả sản phẩm trong đơn hàng với cùng 1 rating
+    
+    URL: /api/orders/{order_id}/rating/
+    
+    Body request:
+    {
+        "rating": 5,  # Bắt buộc, từ 1-5, áp dụng cho tất cả sản phẩm
+        "comment": "Đơn hàng tuyệt vời!"  # Không bắt buộc
+    }
+    """
+    try:
+        # Lấy order và kiểm tra quyền sở hữu
+        order = Order.objects.get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return Response(
+            {"error": "Đơn hàng không tồn tại hoặc bạn không có quyền truy cập"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Kiểm tra trạng thái order (chỉ cho phép đánh giá khi đã giao hàng)
+    if order.status != 3:  # 3 = Delivered
+        return Response(
+            {"error": "Chỉ có thể đánh giá đơn hàng đã được giao"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Lấy rating từ request
+    rating_value = request.data.get('rating')
+    comment = request.data.get('comment', '')
+    
+    # Validate rating
+    if not rating_value:
+        return Response(
+            {"error": "Vui lòng cung cấp rating"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        rating_value = int(rating_value)
+        if rating_value < 1 or rating_value > 5:
+            raise ValueError
+    except (ValueError, TypeError):
+        return Response(
+            {"error": "Rating phải là số nguyên từ 1 đến 5"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    #  BƯỚC 1: Lấy tất cả OrderItem trong order này
+    order_items = OrderItem.objects.filter(order_id=order_id).select_related('product')
+    if not order_items.exists():
+        return Response(
+            {"error": "Đơn hàng không có sản phẩm nào"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    created_reviews = []
+    updated_reviews = []
+    skipped_products = []
+    
+    #  BƯỚC 2: Lặp qua từng OrderItem, lấy product_id và tạo/update review
+    for order_item in order_items:
+        # Bỏ qua nếu không có product (đã bị xóa)
+        if not order_item.product:
+            skipped_products.append(f"OrderItem #{order_item.id} (product đã bị xóa)")
+            continue
+        
+        #  Lấy product_id từ OrderItem
+        product_id = order_item.product.id
+        print(product_id)
+        product = order_item.product
+        
+        # Kiểm tra xem user đã review product này chưa
+        existing_review = Review.objects.filter(
+            product_id=product_id,  # Sử dụng product_id từ OrderItem
+            user=request.user
+        ).first()
+        
+        if existing_review:
+            # Cập nhật review cũ
+            
+            existing_review.rating = rating_value
+            existing_review.comment = comment
+            existing_review.save()
+            updated_reviews.append({
+                "product_id": product_id,
+                "product_name": product.name,
+                "review_id": existing_review.id
+            })
+        else:
+            # Tạo review mới
+            review = Review.objects.create(
+                product_id=product_id,  # Lưu product_id từ OrderItem
+                user=request.user,
+                rating=rating_value,
+                comment=comment
+            )
+            created_reviews.append({
+                "product_id": product_id,
+                "product_name": product.name,
+                "review_id": review.id
+            })
+        
+        # Cập nhật rating trung bình cho product
+        reviews_aggregate = Review.objects.filter(product_id=product_id).aggregate(
+            avg_rating=Avg('rating'),
+            total_reviews=Count('id')
+        )
+        
+        product.rating = round(reviews_aggregate['avg_rating'] or 0, 2)
+        product.num_reviews = reviews_aggregate['total_reviews'] or 0
+        product.save(update_fields=['rating', 'num_reviews'])
+    
+    # Tạo response
+    total_reviews = len(created_reviews) + len(updated_reviews)
+    
+    response_data = {
+        "message": f"Đã đánh giá thành công {total_reviews} sản phẩm từ đơn hàng #{order.order_code}",
+        "order_id": order_id,
+        "order_code": order.order_code,
+        "rating": rating_value,
+        "comment": comment,
+        "total_products_reviewed": total_reviews,
+        "created": len(created_reviews),
+        "updated": len(updated_reviews),
+        "created_reviews": created_reviews,
+        "updated_reviews": updated_reviews,
+    }
+    
+    if skipped_products:
+        response_data["skipped"] = skipped_products
+    
+    return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_order_products_for_review(request, order_id):
+    """
+    API để lấy danh sách sản phẩm trong đơn hàng để đánh giá
+    """
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return Response(
+            {"error": "Đơn hàng không tồn tại hoặc bạn không có quyền truy cập"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Lấy tất cả order items
+    order_items = OrderItem.objects.filter(order=order).select_related('product')
+    
+    products_data = []
+    for item in order_items:
+        if not item.product:
+            continue
+            
+        # Kiểm tra xem đã review chưa
+        existing_review = Review.objects.filter(
+            product=item.product,
+            user=request.user
+        ).first()
+        
+        product_data = {
+            "product_id": item.product.id,
+            "product_name": item.product.name,
+            "quantity": item.quantity,
+            "price": float(item.price),
+            "already_reviewed": existing_review is not None,
+        }
+        
+        if existing_review:
+            product_data["existing_review"] = {
+                "rating": existing_review.rating,
+                "comment": existing_review.comment,
+            }
+        
+        products_data.append(product_data)
+    
+    return Response({
+        "order_id": order.id,
+        "order_code": order.order_code,
+        "products": products_data
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_product_rating(request, order_id):
+    """
+    API để người dùng rating tất cả sản phẩm trong đơn hàng
+    
+    URL: /api/products/{order_id}/rating/
+    
+    Body request:
+    {
+        "rating": 5,  # Bắt buộc, từ 1-5
+        "comment": "Sản phẩm tuyệt vời!"  # Không bắt buộc
+    }
+    """
+    # 🔍 DEBUG: Log thông tin request
+    print("=" * 60)
+    print(f"🔍 CREATE_PRODUCT_RATING - Request Info:")
+    print(f"URL order_id parameter: {order_id}")
+    print(f"User: {request.user.username} (ID: {request.user.id})")
+    print(f"Request data: {request.data}")
+    print("=" * 60)
+    
+    try:
+        # Lấy order và kiểm tra quyền sở hữu
+        order = Order.objects.get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return Response(
+            {"error": "Đơn hàng không tồn tại hoặc bạn không có quyền truy cập"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Kiểm tra trạng thái order
+    if order.status != 3:  # 3 = Returned (theo model của bạn)
+        return Response(
+            {"error": "Chỉ có thể đánh giá đơn hàng đã được giao"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Lấy dữ liệu từ request
+    rating_value = request.data.get('rating')
+    comment = request.data.get('comment', '')
+      
+    # Validate rating
+    if not rating_value:
+        return Response(
+            {"error": "Vui lòng cung cấp rating"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        rating_value = int(rating_value)
+        if rating_value < 1 or rating_value > 5:
+            raise ValueError
+    except (ValueError, TypeError):
+        return Response(
+            {"error": "Rating phải là số nguyên từ 1 đến 5"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Lấy tất cả OrderItem trong order
+    order_items = OrderItem.objects.filter(order_id=order_id).select_related('product')
+    
+    if not order_items.exists():
+        return Response(
+            {"error": "Đơn hàng không có sản phẩm nào"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    
+    created_reviews = []
+    updated_reviews = []
+    skipped_products = []
+    
+    # Lặp qua từng OrderItem
+    for order_item in order_items:
+        if not order_item.product:
+            skipped_products.append(f"OrderItem #{order_item.id} (product đã bị xóa)")
+            continue
+        
+        product = order_item.product
+        product_id = product.id
+        
+        # Kiểm tra xem user đã review product này chưa
+        existing_review = Review.objects.filter(
+            product=product,
+            user=request.user
+        ).first()
+        
+        if existing_review:
+            
+            # Cập nhật review cũ
+            existing_review.rating = rating_value
+            existing_review.comment = comment
+            existing_review.save()
+            
+            updated_reviews.append({
+                "product_id": product_id,
+                "product_name": product.name,
+                "review_id": existing_review.id
+            })
+        else:           
+            # Tạo review mới
+            review = Review.objects.create(
+                product=product,  # Truyền object, không phải ID
+                user=request.user,
+                rating=rating_value,
+                comment=comment
+            )
+            
+            created_reviews.append({
+                "product_id": product_id,
+                "product_name": product.name,
+                "review_id": review.id
+            })
+    
+        reviews_aggregate = Review.objects.filter(product=product).aggregate(
+            avg_rating=Avg('rating'),
+            total_reviews=Count('id')
+        )
+        
+        old_rating = product.rating
+        old_num_reviews = product.num_reviews
+        
+        product.rating = round(reviews_aggregate['avg_rating'] or 0, 2)
+        product.num_reviews = reviews_aggregate['total_reviews'] or 0
+        product.save(update_fields=['rating', 'num_reviews'])
+    
+    # Tạo response
+    total_reviews = len(created_reviews) + len(updated_reviews)
+    
+    response_data = {
+        "message": f"Đã đánh giá thành công {total_reviews} sản phẩm từ đơn hàng #{order.order_code}",
+        "order_id": order_id,
+        "order_code": order.order_code,
+        "rating": rating_value,
+        "comment": comment,
+        "total_products_reviewed": total_reviews,
+        "created": len(created_reviews),
+        "updated": len(updated_reviews),
+        "created_reviews": created_reviews,
+        "updated_reviews": updated_reviews,
+    }
+    
+    if skipped_products:
+        response_data["skipped"] = skipped_products
+
+    return Response(response_data, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+def get_product_reviews(request, product_id):
+    """
+    API để lấy danh sách reviews của sản phẩm
+    """
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return Response(
+            {"error": "Sản phẩm không tồn tại"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    reviews = Review.objects.filter(product=product).order_by('-created_at')
+    serializer = ReviewSerializer(reviews, many=True)
+    
+    return Response({
+        "product_id": product.id,
+        "product_name": product.name,
+        "average_rating": product.rating,
+        "total_reviews": product.num_reviews,
+        "reviews": serializer.data
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_product_review(request, review_id):
+    """
+    API để xóa review của chính mình
+    """
+    try:
+        review = Review.objects.get(id=review_id, user=request.user)
+    except Review.DoesNotExist:
+        return Response(
+            {"error": "Review không tồn tại hoặc bạn không có quyền xóa"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    product = review.product
+    review.delete()
+    
+
+    reviews_aggregate = Review.objects.filter(product=product).aggregate(
+        avg_rating=Avg('rating'),
+        total_reviews=Count('id')
+    )
+    
+    product.rating = round(reviews_aggregate['avg_rating'] or 0, 2)
+    product.num_reviews = reviews_aggregate['total_reviews'] or 0
+    product.save(update_fields=['rating', 'num_reviews'])
+    
+    return Response(
+        {"message": "Xóa đánh giá thành công"},
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_product_review(request, review_id):
+    """
+    API để xóa review của chính mình
+    """
+    try:
+        review = Review.objects.get(id=review_id, user=request.user)
+    except Review.DoesNotExist:
+        return Response(
+            {"error": "Review không tồn tại hoặc bạn không có quyền xóa"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    product = review.product
+    review.delete()
+    
+    # Cập nhật lại rating của product
+    from django.db.models import Avg, Count
+    reviews_aggregate = Review.objects.filter(product=product).aggregate(
+        avg_rating=Avg('rating'),
+        total_reviews=Count('id')
+    )
+    
+    product.rating = round(reviews_aggregate['avg_rating'] or 0, 2)
+    product.num_reviews = reviews_aggregate['total_reviews'] or 0
+    product.save(update_fields=['rating', 'num_reviews'])
+    
+    return Response(
+        {"message": "Xóa đánh giá thành công"},
+        status=status.HTTP_200_OK
+    )
